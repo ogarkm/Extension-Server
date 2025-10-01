@@ -2,19 +2,27 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Custom PDF Reader</title>
-    <!-- Using pdf.js from a CDN -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animex PDF Reader</title>
+    
+    <!-- PDF.js Library from CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+
     <style>
         :root {
-            --primary-bg: #1e1e1e;
-            --secondary-bg: #2d2d2d;
+            --primary-bg: #121212;
+            --secondary-bg: rgba(30, 30, 30, 0.9);
             --text-color: #e0e0e0;
-            --accent-color: #007acc;
-            --border-color: #444;
+            --accent-color: #FF9500;
+            --border-color: #333333;
             --shadow-color: rgba(0, 0, 0, 0.5);
+            --icon-fill: #e0e0e0;
+            --header-height: 55px;
+            --footer-height: 60px;
         }
         html, body {
             margin: 0; padding: 0; width: 100%; height: 100%;
@@ -22,7 +30,9 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow: hidden;
         }
-        #app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; }
+        #app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; position: relative; }
+
+        /* --- Welcome/Message Screen --- */
         #message-container {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             display: flex; justify-content: center; align-items: center;
@@ -36,245 +46,422 @@
         }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         #file-input-button {
-            background-color: var(--accent-color); color: white;
-            border: none; padding: 12px 24px; border-radius: 5px;
-            font-size: 16px; cursor: pointer; display: none;
+            background-color: var(--accent-color); color: #121212; border: none; padding: 12px 24px;
+            border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: none; margin-top: 15px;
+            transition: transform 0.2s ease, background-color 0.2s ease;
         }
-        #file-input-button:hover { background-color: #005a9e; }
+        #file-input-button:hover { background-color: #ffae42; transform: scale(1.05); }
         #file-input { display: none; }
+
+        /* --- Viewer --- */
         #viewer-container {
-            flex-grow: 1; position: relative; overflow: hidden;
+            flex-grow: 1; position: relative; overflow: auto;
             display: flex; justify-content: center;
+            padding-top: calc(var(--header-height) + 20px);
+            padding-bottom: calc(var(--footer-height) + 20px);
+            box-sizing: border-box;
         }
-        #pdf-container { padding-bottom: 80px; }
         #pdf-container canvas {
-            display: block; margin: 10px auto;
-            box-shadow: 0 4px 12px var(--shadow-color); max-width: 100%; height: auto;
+            display: block; margin: 0 auto;
+            max-width: 100%; height: auto;
+            transition: box-shadow 0.3s ease;
         }
-        #page-turn-overlay {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 10; display: flex;
+        #pdf-container.paged-view canvas {
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px var(--shadow-color);
         }
-        .page-area { flex: 1; height: 100%; cursor: pointer; -webkit-tap-highlight-color: rgba(0,0,0,0.1); }
-        .page-area:hover { background-color: rgba(255, 255, 255, 0.05); }
-        #controls {
-            position: fixed; bottom: -80px;
-            left: 0; width: 100%;
-            background-color: var(--secondary-bg); box-shadow: 0 -2px 10px var(--shadow-color);
-            display: flex; justify-content: space-around; align-items: center;
-            height: 60px; padding: 0 10px; box-sizing: border-box; z-index: 20;
-            transition: bottom 0.3s ease-in-out;
+        #pdf-container.webtoon-view canvas {
+            margin-bottom: 4px;
         }
-        .control-button { background: none; border: none; color: var(--text-color); font-size: 24px; cursor: pointer; padding: 10px; border-radius: 50%; width: 44px; height: 44px; display: flex; justify-content: center; align-items: center; }
-        .control-button:hover { background-color: var(--border-color); }
-        #page-info { font-size: 16px; min-width: 80px; text-align: center; }
-        .toggle-switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .toggle-switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #555; transition: .4s; border-radius: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 5px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: var(--text-color); transition: .4s; border-radius: 50%; }
-        .slider-icon { font-size: 14px; color: var(--text-color); user-select: none; }
-        input:checked + .slider { background-color: var(--accent-color); }
-        input:checked + .slider:before { transform: translateX(26px); }
+
+
+        /* --- Controls --- */
+        .controls-bar {
+            position: fixed; left: 0; width: 100%;
+            background-color: var(--secondary-bg);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px var(--shadow-color);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; box-sizing: border-box; z-index: 20;
+            transition: transform 0.3s ease-in-out;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #header { top: 0; height: var(--header-height); border-bottom: 1px solid var(--border-color);}
+        #footer { bottom: 0; height: var(--footer-height); border-top: 1px solid var(--border-color);}
+        .controls-hidden #header { transform: translateY(-100%); }
+        .controls-hidden #footer { transform: translateY(100%); }
+
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-button {
+            background: none; border: none; color: var(--icon-fill);
+            cursor: pointer; padding: 10px; border-radius: 50%;
+            width: 44px; height: 44px; display: flex; justify-content: center; align-items: center;
+            font-size: 18px; transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .control-button:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.1); }
+        .control-button:disabled { color: #666; cursor: not-allowed; }
+        .control-button.active { color: var(--accent-color); background-color: rgba(255, 149, 0, 0.15); }
+        
+        #file-name {
+            font-size: 16px; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: calc(100vw - 400px);
+        }
+        #page-info { font-size: 16px; min-width: 90px; text-align: center; cursor: pointer; padding: 8px 12px; border-radius: 20px; transition: background-color 0.2s ease; user-select: none; }
+        #page-info:hover { background-color: rgba(255, 255, 255, 0.1); }
+        #page-input { width: 50px; background-color: var(--primary-bg); color: var(--text-color); border: 1px solid var(--accent-color); text-align: center; font-size: 16px; border-radius: 4px; }
+        .divider { width: 1px; height: 25px; background-color: var(--border-color); margin: 0 10px; }
+        
+        @media (max-width: 600px) {
+            #file-name { display: none; }
+            .divider:not(.mobile-visible) { display: none; }
+            .control-group { gap: 5px; }
+            .controls-bar { padding: 0 10px; }
+        }
     </style>
 </head>
 <body>
     <div id="app-container">
+        <!-- Initial Message/Loader -->
         <div id="message-container">
             <div id="loader" class="loader"></div>
             <p id="message-text">Loading...</p>
             <input type="file" id="file-input" accept="application/pdf" />
-            <button id="file-input-button">Or Choose a Local PDF File</button>
+            <button id="file-input-button">Choose a Local PDF</button>
         </div>
+
+        <!-- PDF Viewer Area -->
         <div id="viewer-container">
             <div id="pdf-container"></div>
-            <div id="page-turn-overlay">
-                <div id="prev-page-area" class="page-area"></div>
-                <div id="next-page-area" class="page-area"></div>
+        </div>
+
+        <!-- Top Controls -->
+        <header id="header" class="controls-bar">
+            <div class="control-group">
+                <button id="back-button" class="control-button" title="Back" style="display: none;"><i class="fa-solid fa-arrow-left"></i></button>
+                <span id="file-name"></span>
             </div>
-        </div>
-        <div id="controls">
-            <button id="zoom-out" class="control-button" title="Zoom Out">-</button>
-            <span id="page-info">Page 0 / 0</span>
-            <button id="zoom-in" class="control-button" title="Zoom In">+</button>
-            <label class="toggle-switch" title="Toggle Mode (Page/Scroll)">
-                <input type="checkbox" id="mode-toggle">
-                <span class="slider">
-                    <span class="slider-icon">&#📖;</span>
-                    <span class="slider-icon">&#📱;</span>
-                </span>
-            </label>
-        </div>
+            <div class="control-group">
+                <button id="view-webtoon-btn" class="control-button" title="Webtoon View"><i class="fa-solid fa-arrows-up-down"></i></button>
+                <button id="view-paged-btn" class="control-button" title="Paged View"><i class="fa-solid fa-file-lines"></i></button>
+                <div class="divider"></div>
+                <button id="rotate-button" class="control-button" title="Rotate Clockwise"><i class="fa-solid fa-rotate-right"></i></button>
+                <button id="download-button" class="control-button" title="Download PDF"><i class="fa-solid fa-download"></i></button>
+                <button id="fullscreen-button" class="control-button" title="Toggle Fullscreen">
+                    <i id="fs-enter-icon" class="fa-solid fa-expand"></i>
+                    <i id="fs-exit-icon" style="display:none;" class="fa-solid fa-compress"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Bottom Controls -->
+        <footer id="footer" class="controls-bar">
+            <div class="control-group">
+                <button id="zoom-out-button" class="control-button" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button id="zoom-fit-width-button" class="control-button" title="Fit to Width"><i class="fa-solid fa-arrows-left-right-to-line"></i></button>
+                <button id="zoom-fit-page-button" class="control-button" title="Fit to Page"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                <button id="zoom-in-button" class="control-button" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+            </div>
+            <div class="control-group">
+                <button id="prev-page-button" class="control-button" title="Previous Page"><i class="fa-solid fa-chevron-left"></i></button>
+                <span id="page-info">0 / 0</span>
+                <button id="next-page-button" class="control-button" title="Next Page"><i class="fa-solid fa-chevron-right"></i></button>
+            </div>
+            <div class="control-group" style="min-width: 176px;"> <!-- Placeholder to balance footer -->
+            </div>
+        </footer>
     </div>
+
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
 
-        let pdfDoc = null, currentPageNum = 1, totalPages = 0, currentScale = 1.5, currentMode = 'page', isRendering = false;
+        // State variables
+        let pdfDoc = null, currentPageNum = 1, totalPages = 0;
+        let currentScale = 'auto', currentRotation = 0, currentMode = 'paged';
+        let isRendering = false, pdfUrl = null, autoHideTimeout = null;
+        let touchStartX = 0, touchMoveX = 0;
 
+        // DOM elements
+        const appContainer = document.getElementById('app-container');
         const viewerContainer = document.getElementById('viewer-container');
         const pdfContainer = document.getElementById('pdf-container');
         const pageInfo = document.getElementById('page-info');
         const messageContainer = document.getElementById('message-container');
         const loader = document.getElementById('loader');
         const messageText = document.getElementById('message-text');
-        const pageTurnOverlay = document.getElementById('page-turn-overlay');
-        const controls = document.getElementById('controls');
         const fileInput = document.getElementById('file-input');
         const fileInputButton = document.getElementById('file-input-button');
-
-        async function loadAndRenderPdf(source) {
+        const fileNameEl = document.getElementById('file-name');
+        
+        // --- PDF Loading and Rendering ---
+        async function loadAndRenderPdf(source, fileName) {
             try {
-                messageContainer.style.display = 'flex';
-                loader.style.display = 'block';
-                messageText.textContent = 'Loading PDF...';
-
+                showLoadingState(`Loading PDF...`);
+                pdfUrl = source;
                 const loadingTask = pdfjsLib.getDocument(source);
                 pdfDoc = await loadingTask.promise;
                 totalPages = pdfDoc.numPages;
+                currentPageNum = 1;
+                currentRotation = 0;
+                
+                fileNameEl.textContent = fileName || 'Document';
+                document.title = fileName ? `${fileName} - Reader` : 'PDF Reader';
 
                 messageContainer.style.display = 'none';
-                controls.style.bottom = '0';
-                document.getElementById('mode-toggle').checked = false;
+                appContainer.classList.remove('controls-hidden');
 
-                currentPageNum = 1;
-                updateView();
-                setupScrollObserver();
+                await detectAndSetLayout(); // Smart layout detection
+                setupEventListeners();
+                showControls();
             } catch (error) {
                 console.error("Error loading PDF:", error);
-                loader.style.display = 'none';
-                messageText.textContent = `Error: Could not load PDF. Please check the URL/file and ensure it's valid.`;
-                fileInputButton.style.display = 'block';
+                showErrorState(`Error: Could not load PDF. Check file/URL.`);
+            }
+        }
+        
+        // Smart feature from Animex
+        async function detectAndSetLayout() {
+            const page = await pdfDoc.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            const isWebtoon = viewport.height > viewport.width * 2;
+            setViewMode(isWebtoon ? 'webtoon' : 'paged', true); // Set mode without re-rendering yet
+            await updateView(); // Now render with the correct mode
+        }
+
+        async function renderPage(num) {
+            if (isRendering) return;
+            isRendering = true;
+            
+            try {
+                const page = await pdfDoc.getPage(num);
+                const scale = await calculateScale();
+                const viewport = page.getViewport({ scale, rotation: currentRotation });
+                
+                const canvasId = `page-${num}`;
+                let canvas = document.getElementById(canvasId);
+                if (!canvas) { return; }
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                canvas.dataset.rendered = "true";
+            } finally {
+                isRendering = false;
             }
         }
 
-        async function renderPage(num, canvas) {
-            isRendering = true;
-            const page = await pdfDoc.getPage(num);
-            const viewport = page.getViewport({ scale: currentScale });
-            canvas.height = viewport.height;
-            canvas.width = viewport.width;
-            const context = canvas.getContext('2d');
-            const renderContext = { canvasContext: context, viewport: viewport };
-            await page.render(renderContext).promise;
-            isRendering = false;
-        }
-
-        function updateView() {
+        async function updateView() {
             if (!pdfDoc) return;
-            updateControls();
-            if (currentMode === 'page') {
-                viewerContainer.style.overflowY = 'hidden';
-                pageTurnOverlay.style.display = 'flex';
-                pdfContainer.innerHTML = '';
+            
+            pdfContainer.innerHTML = '';
+            viewerContainer.scrollTop = 0;
+
+            if (currentMode === 'paged') {
+                viewerContainer.style.overflow = 'hidden';
                 const canvas = document.createElement('canvas');
                 canvas.id = `page-${currentPageNum}`;
                 pdfContainer.appendChild(canvas);
-                renderPage(currentPageNum, canvas);
-            } else {
-                viewerContainer.style.overflowY = 'auto';
-                pageTurnOverlay.style.display = 'none';
-                if (pdfContainer.childElementCount !== totalPages) {
-                    pdfContainer.innerHTML = '';
-                    for (let i = 1; i <= totalPages; i++) {
-                        const canvas = document.createElement('canvas');
-                        canvas.id = `page-${i}`;
-                        pdfContainer.appendChild(canvas);
-                        renderPage(i, canvas);
-                    }
+                await renderPage(currentPageNum);
+            } else { // webtoon mode
+                viewerContainer.style.overflow = 'auto';
+                for (let i = 1; i <= totalPages; i++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `page-${i}`;
+                    pdfContainer.appendChild(canvas);
+                }
+                lazyLoadVisiblePages();
+            }
+            updateControls();
+        }
+
+        async function calculateScale() {
+            const page = await pdfDoc.getPage(1);
+            const viewport = page.getViewport({ scale: 1.0, rotation: currentRotation });
+            const containerWidth = viewerContainer.clientWidth - 30;
+            const containerHeight = viewerContainer.clientHeight - 30;
+
+            if (currentScale === 'auto') {
+                return Math.min(containerWidth / viewport.width, containerHeight / viewport.height);
+            } else if (currentScale === 'width') {
+                return containerWidth / viewport.width;
+            }
+            return currentScale; // It's a number
+        }
+
+        // --- UI and Controls ---
+        function updateControls() {
+            pageInfo.textContent = `${currentPageNum} / ${totalPages}`;
+            document.getElementById('prev-page-button').disabled = (currentPageNum <= 1);
+            document.getElementById('next-page-button').disabled = (currentPageNum >= totalPages);
+
+            document.getElementById('view-paged-btn').classList.toggle('active', currentMode === 'paged');
+            document.getElementById('view-webtoon-btn').classList.toggle('active', currentMode === 'webtoon');
+
+            ['zoom-fit-page-button', 'zoom-fit-width-button'].forEach(id => document.getElementById(id).classList.remove('active'));
+            if(currentScale === 'auto') document.getElementById('zoom-fit-page-button').classList.add('active');
+            if(currentScale === 'width') document.getElementById('zoom-fit-width-button').classList.add('active');
+        }
+
+        function showLoadingState(message) {
+            messageContainer.style.display = 'flex';
+            loader.style.display = 'block';
+            fileInputButton.style.display = 'none';
+            messageText.textContent = message;
+        }
+        
+        function showErrorState(message) {
+            loader.style.display = 'none';
+            fileInputButton.style.display = 'block';
+            messageText.innerHTML = message;
+        }
+
+        function showControls() {
+            clearTimeout(autoHideTimeout);
+            appContainer.classList.remove('controls-hidden');
+            autoHideTimeout = setTimeout(() => {
+                if(!document.querySelector('#page-input')) appContainer.classList.add('controls-hidden');
+            }, 3000);
+        }
+
+        // --- Event Handlers ---
+        function goToPrevPage() { if (currentPageNum > 1) { currentPageNum--; updateView(); } }
+        function goToNextPage() { if (currentPageNum < totalPages) { currentPageNum++; updateView(); } }
+        
+        function goToPage(num) {
+            const pageNumber = parseInt(num);
+            if (pageNumber > 0 && pageNumber <= totalPages) {
+                currentPageNum = pageNumber;
+                if (currentMode === 'paged') {
+                    updateView();
+                } else {
+                    document.getElementById(`page-${currentPageNum}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
             }
         }
-
-        function updateControls() {
-            pageInfo.textContent = `Page ${currentPageNum} / ${totalPages}`;
+        
+        function setZoom(type) {
+             if (type === 'in') currentScale = (typeof currentScale !== 'number' ? 1.0 : currentScale) + 0.2;
+             else if (type === 'out') currentScale = Math.max(0.2, (typeof currentScale !== 'number' ? 1.0 : currentScale) - 0.2);
+             else currentScale = type;
+             updateView();
         }
 
-        function goToPrevPage() {
-            if (currentPageNum <= 1 || isRendering) return;
-            currentPageNum--;
-            updateView();
+        function rotate() { currentRotation = (currentRotation + 90) % 360; updateView(); }
+        
+        function setViewMode(mode, isInitial = false) {
+            if (currentMode === mode && !isInitial) return;
+            currentMode = mode;
+            pdfContainer.className = `${mode}-view`;
+            if (!isInitial) updateView(); // Only re-render if it's a manual switch
         }
 
-        function goToNextPage() {
-            if (currentPageNum >= totalPages || isRendering) return;
-            currentPageNum++;
-            updateView();
+        function toggleFullscreen() {
+            if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+            else if (document.exitFullscreen) document.exitFullscreen();
         }
+        document.addEventListener('fullscreenchange', () => {
+            const isFullscreen = !!document.fullscreenElement;
+            document.getElementById('fs-enter-icon').style.display = isFullscreen ? 'none' : 'block';
+            document.getElementById('fs-exit-icon').style.display = isFullscreen ? 'block' : 'none';
+        });
 
-        function zoomIn() {
-            currentScale += 0.2;
-            if (currentMode === 'scroll') pdfContainer.innerHTML = '';
-            updateView();
-        }
-
-        function zoomOut() {
-            if (currentScale <= 0.5) return;
-            currentScale -= 0.2;
-            if (currentMode === 'scroll') pdfContainer.innerHTML = '';
-            updateView();
-        }
-
-        function toggleMode() {
-            currentMode = document.getElementById('mode-toggle').checked ? 'scroll' : 'page';
-            updateView();
-            if (currentMode === 'scroll') {
-                setTimeout(() => {
-                    const targetPage = document.getElementById(`page-${currentPageNum}`);
-                    if(targetPage) {
-                        viewerContainer.scrollTop = targetPage.offsetTop - 20;
-                    }
-                }, 100);
-            }
-        }
-
-        let observer = new IntersectionObserver((entries) => {
-            if (currentMode !== 'scroll') return;
+        // --- Lazy Loading for Webtoon Mode ---
+        const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
-                if(entry.isIntersecting) {
-                    const pageNum = parseInt(entry.target.id.split('-')[1]);
-                    if (pageNum !== currentPageNum) {
-                        currentPageNum = pageNum;
-                        updateControls();
+                if (entry.isIntersecting) {
+                    const canvas = entry.target;
+                    const pageNum = parseInt(canvas.id.split('-')[1]);
+                    
+                    if (entry.intersectionRatio > 0.5) {
+                        if (currentPageNum !== pageNum) {
+                            currentPageNum = pageNum;
+                            updateControls();
+                        }
                     }
+                    if (canvas.dataset.rendered !== "true") renderPage(pageNum);
                 }
             });
-        }, { root: viewerContainer, threshold: 0.5 });
+        }, { root: viewerContainer, threshold: [0.1, 0.5, 0.9] });
 
-        function setupScrollObserver() {
+        function lazyLoadVisiblePages() {
             observer.disconnect();
-            const canvases = pdfContainer.querySelectorAll('canvas');
-            canvases.forEach(canvas => observer.observe(canvas));
+            pdfContainer.querySelectorAll('canvas').forEach(canvas => observer.observe(canvas));
+        }
+        
+        // --- Setup and Initialization ---
+        function setupEventListeners() {
+            if (setupEventListeners.bound) return;
+            setupEventListeners.bound = true;
+
+            // Header/Footer Controls
+            document.getElementById('view-webtoon-btn').addEventListener('click', () => setViewMode('webtoon'));
+            document.getElementById('view-paged-btn').addEventListener('click', () => setViewMode('paged'));
+            document.getElementById('rotate-button').addEventListener('click', rotate);
+            document.getElementById('download-button').addEventListener('click', () => { if (pdfUrl) window.open(pdfUrl, '_blank'); });
+            document.getElementById('fullscreen-button').addEventListener('click', toggleFullscreen);
+            document.getElementById('prev-page-button').addEventListener('click', goToPrevPage);
+            document.getElementById('next-page-button').addEventListener('click', goToNextPage);
+            document.getElementById('zoom-in-button').addEventListener('click', () => setZoom('in'));
+            document.getElementById('zoom-out-button').addEventListener('click', () => setZoom('out'));
+            document.getElementById('zoom-fit-page-button').addEventListener('click', () => setZoom('auto'));
+            document.getElementById('zoom-fit-width-button').addEventListener('click', () => setZoom('width'));
+            
+            pageInfo.addEventListener('click', () => {
+                pageInfo.innerHTML = `<input id="page-input" type="number" min="1" max="${totalPages}" value="${currentPageNum}" />`;
+                const pageInput = document.getElementById('page-input');
+                pageInput.focus(); pageInput.select();
+                const revert = () => { if (document.getElementById('page-input')) updateControls(); };
+                pageInput.addEventListener('blur', revert);
+                pageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { goToPage(pageInput.value); pageInput.blur(); }
+                    if (e.key === 'Escape') pageInput.blur();
+                });
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                if (e.key === 'ArrowLeft') goToPrevPage();
+                else if (e.key === 'ArrowRight') goToNextPage();
+            });
+
+            ['mousemove', 'mousedown', 'touchstart'].forEach(evt => window.addEventListener(evt, showControls));
+
+            viewerContainer.addEventListener('touchstart', (e) => { if(currentMode === 'paged') { touchStartX = e.changedTouches[0].screenX; touchMoveX = touchStartX; } }, { passive: true });
+            viewerContainer.addEventListener('touchmove', (e) => { if(currentMode === 'paged') { touchMoveX = e.changedTouches[0].screenX; } }, { passive: true });
+            viewerContainer.addEventListener('touchend', () => { if(currentMode === 'paged') { if (touchStartX - touchMoveX > 50) goToNextPage(); else if (touchMoveX - touchStartX > 50) goToPrevPage(); } });
         }
 
         window.addEventListener('load', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const pdfUrl = urlParams.get('file');
+            const params = new URLSearchParams(window.location.search);
+            const fileUrlParam = params.get('file');
+            const isEmbedded = params.get('embedded');
 
-            if (pdfUrl) {
-                loadAndRenderPdf(pdfUrl);
+            if (isEmbedded) {
+                const backButton = document.getElementById('back-button');
+                backButton.style.display = 'flex';
+                backButton.addEventListener('click', () => {
+                    window.parent.postMessage({ type: 'pdf-reader-back' }, '*');
+                });
+
+                window.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'load-pdf') {
+                        const { fileData, seriesTitle, chapterTitle } = event.data;
+                        const displayTitle = `${seriesTitle} - ${chapterTitle}`;
+                        loadAndRenderPdf(fileData, displayTitle);
+                    }
+                });
+            } else if (fileUrlParam) {
+                const fileName = fileUrlParam.split('/').pop().split('?')[0];
+                loadAndRenderPdf(fileUrlParam, decodeURIComponent(fileName));
             } else {
-                loader.style.display = 'none';
-                messageText.innerHTML = `Please provide a PDF via the <code>?file=</code> parameter, or choose a local file.`;
-                fileInputButton.style.display = 'block';
+                showErrorState(`Provide a PDF via the <code>?file=...</code> URL parameter, or choose one locally.`);
             }
-
-            document.getElementById('prev-page-area').addEventListener('click', goToPrevPage);
-            document.getElementById('next-page-area').addEventListener('click', goToNextPage);
-            document.getElementById('zoom-in').addEventListener('click', zoomIn);
-            document.getElementById('zoom-out').addEventListener('click', zoomOut);
-            document.getElementById('mode-toggle').addEventListener('change', toggleMode);
-            window.addEventListener('keydown', (e) => {
-                if (currentMode === 'page') {
-                    if (e.key === 'ArrowLeft') goToPrevPage();
-                    else if (e.key === 'ArrowRight') goToNextPage();
-                }
-            });
 
             fileInputButton.addEventListener('click', () => fileInput.click());
             fileInput.addEventListener('change', (event) => {
                 const file = event.target.files[0];
-                if (file && file.type === 'application/pdf') {
-                    const fileUrl = URL.createObjectURL(file);
-                    loadAndRenderPdf(fileUrl);
+                if (file?.type === 'application/pdf') {
+                    loadAndRenderPdf(URL.createObjectURL(file), file.name);
                 }
             });
         });

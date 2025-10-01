@@ -111,48 +111,20 @@
     <div class="login-container">
         <div class="login-header">
             <h1>Animex</h1>
-            <p>Sign in or create an account</p>
+            <p>Signing in...</p>
         </div>
-        <form id="login-form" class="login-form">
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" required autocomplete="username">
-            </div>
-            <div class="input-group">
-                <label for="passcode">Passcode</label>
-                <input type="password" id="passcode" name="passcode" required autocomplete="current-password">
-            </div>
-            <button type="submit" id="login-button" class="login-button">Continue</button>
-        </form>
-        <div id="status-message" class="status-message"></div>
     </div>
 
     <script>
-        const form = document.getElementById('login-form');
-        const button = document.getElementById('login-button');
-        const statusMessage = document.getElementById('status-message');
-
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            button.disabled = true;
-            button.textContent = 'Continuing...';
-            statusMessage.textContent = '';
-
-            const username = document.getElementById('username').value.trim();
-            const passcode = document.getElementById('passcode').value;
-
-            if (!username || !passcode) {
-                statusMessage.textContent = 'Username and passcode are required.';
-                button.disabled = false;
-                button.textContent = 'Continue';
-                return;
-            }
+        async function autoLogin() {
+            const defaultUsername = 'User';
+            const defaultPasscode = '0000'; // A simple default passcode
 
             try {
                 const response = await fetch('/login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: username, passcode: passcode })
+                    body: JSON.stringify({ name: defaultUsername, passcode: defaultPasscode })
                 });
 
                 if (response.ok) {
@@ -160,17 +132,16 @@
                     localStorage.setItem('currentProfileId', profile.id);
                     window.location.href = 'index.html';
                 } else {
-                    const errorData = await response.json();
-                    statusMessage.textContent = errorData.detail || 'An unknown error occurred.';
+                    // Handle error - maybe show a message
+                    document.querySelector('.login-header p').textContent = 'Could not sign in automatically. Please check the server.';
                 }
             } catch (error) {
-                console.error('Login error:', error);
-                statusMessage.textContent = 'Could not connect to the server.';
-            } finally {
-                button.disabled = false;
-                button.textContent = 'Continue';
+                console.error('Auto-login error:', error);
+                document.querySelector('.login-header p').textContent = 'Could not connect to the server.';
             }
-        });
+        }
+
+        window.addEventListener('DOMContentLoaded', autoLogin);
     </script>
 </body>
 </html>

@@ -19,11 +19,7 @@
     />
     <link rel="stylesheet" href="Resources/manga.css" />
 
-    <!-- PDF.js for integrated reader -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
-    <script>
-      pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
-    </script>
+    
 
     <style>
       :root {
@@ -133,7 +129,6 @@
       }
       .grid-item:hover {
         transform: scale(1.05);
-        box-shadow: 0 0 20px rgba(var(--accent-color-rgb), 0.4);
       }
       .grid-item-poster {
         width: 100%;
@@ -147,7 +142,7 @@
       }
       .grid-item-title {
         font-size: 0.9rem;
-        font-weight: 500;
+        font-weight: 700;
         color: var(--text-primary);
         white-space: nowrap;
         overflow: hidden;
@@ -162,9 +157,86 @@
       #details-view {
         padding: 0; /* Remove default padding to allow hero to be full-width */
       }
+      .hero-title-container {
+        position: absolute;
+        bottom: 10px;
+        margin-bottom: 20px;
+        left: 0;
+        right: 0;
+        z-index: 5;
+        padding: 0 5%;
+      }
+      #details-view .manga-title-en,
+      #details-view .manga-title-jp {
+        text-align: center;
+        max-width: 900px;
+        margin-left: auto;
+        margin-right: auto;
+      }
+      #details-view .manga-title-jp {
+        margin-bottom: 0;
+      }
+      #content-sheet {
+        padding-top: 6rem;
+      }
       #details-view .item-list {
         list-style: none;
         padding: 0;
+        display: flex;
+        flex-direction: column;
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        gap: 10px;
+      }
+
+      #details-view .chapter-item {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        background-color: var(--surface-color);
+        border-bottom: 1px solid var(--border-color);
+        transition: background-color 0.2s ease;
+        cursor: pointer;
+      }
+
+      #details-view .chapter-item:last-child {
+        border-bottom: none;
+      }
+
+      #details-view .chapter-item:hover {
+        background-color: #3f3f46;
+        transform: none;
+        border: none;
+      }
+
+      #details-view .chapter-item .chapter-details {
+        flex-grow: 1;
+        overflow: hidden;
+        padding: 0; /* Override manga.css */
+      }
+
+      #details-view .chapter-item .chapter-title {
+        font-weight: 500;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin: 0 0 4px 0;
+        padding: 0;
+        font-size: 0.95rem;
+        color: var(--text-primary);
+      }
+
+      #details-view .chapter-item .chapter-meta {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        margin: 0;
+        padding: 0;
+      }
+
+      #details-view .chapter-item .chapter-actions {
+        margin-left: 16px;
+        color: var(--text-secondary);
+        font-size: 1rem;
       }
 
       /* --- Integrated Player View --- */
@@ -220,7 +292,7 @@
         transform: translateY(100%);
         transition: transform 0.3s ease;
         overflow-y: auto;
-        padding: 16px;
+        padding: 16px 16px 90px;
       }
       #player-view .episode-shelf.visible {
         transform: translateY(0);
@@ -300,6 +372,20 @@
         .content-grid {
           grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         }
+        /* Fix for title overlapping poster on mobile */
+        .cover-art-container {
+            transform: translateY(15px);
+        }
+        .cover-art-container.loaded {
+            transform: translateY(20px);
+        }
+        .hero-title-container {
+            bottom: 0;
+            margin-bottom: 10px;
+        }
+        #content-sheet {
+            margin-top: -40px;
+        }
       }
     </style>
   </head>
@@ -309,7 +395,7 @@
       <div class="view-header">
         <h1 class="view-title">Library</h1>
         <button id="import-folder-btn" class="action-btn">
-          <i class="fas fa-folder-plus"></i> Import Folder
+          <i class="fas fa-folder-plus"></i>
         </button>
         <input
           type="file"
@@ -346,37 +432,54 @@
 
     <!-- ======== VIEW 2: SERIES DETAILS (REDESIGNED) ======== -->
     <div id="details-view" class="hidden">
-      <div id="hero-section">
-          <div class="hero-overlay"></div>
-          <button class="back-btn" data-target-view="main-view"><i class="fas fa-arrow-left"></i></button>
-          <div class="cover-art-container">
-              <img id="details-poster" src="" alt="Cover Art">
-          </div>
-      </div>
-      <div id="content-sheet">
-          <h1 id="details-title-en" class="manga-title-en"></h1>
-          <h2 id="details-title-jp" class="manga-title-jp"></h2>
-          
-          <div class="synopsis-container">
-              <h3>Synopsis</h3>
-              <p id="details-synopsis"></p>
-          </div>
+      <header id="hero-section">
+        <div class="hero-overlay"></div>
+        <button class="back-btn" data-target-view="main-view">
+          <i class="fas fa-arrow-left"></i>
+        </button>
+        <h1 id="vertical-title-jp" class="vertical-title-jp"></h1>
+        <div class="cover-art-container">
+          <img id="manga-cover" src="" alt="Cover Art" />
+        </div>
+        <div class="hero-title-container">
+          <h2 id="details-title-en" class="manga-title-en"></h2>
+          <p id="details-title-jp" class="manga-title-jp"></p>
+        </div>
+      </header>
+      <main id="content-sheet">
+        <div class="synopsis-container">
+          <h3>Synopsis</h3>
+          <p id="details-synopsis"></p>
+        </div>
 
-          <div class="tabs-section">
-              <div class="tabs-container">
-                  <button id="items-tab-btn" class="tab-btn active">Episodes / Chapters</button>
-              </div>
-              <div id="items-panel" class="tab-panel active">
-                  <div class="view-header" style="margin-bottom: 1rem; padding: 0; justify-content: space-between;">
-                      <h2 id="details-item-list-title" class="section-title" style="margin: 0; border: 0; font-size: 1.5rem;"></h2>
-                      <button id="map-files-btn" class="action-btn hidden">
-                          <i class="fas fa-link"></i> Map Files
-                      </button>
-                  </div>
-                  <ul id="details-item-list" class="item-list"></ul>
-              </div>
+        <div class="tabs-section">
+          <div class="tabs-container">
+            <button id="items-tab-btn" class="tab-btn active">
+              Episodes / Chapters
+            </button>
           </div>
-      </div>
+          <div id="items-panel" class="tab-panel active">
+            <div
+              class="view-header"
+              style="
+                margin-bottom: 1rem;
+                padding: 0;
+                justify-content: space-between;
+              "
+            >
+              <h2
+                id="details-item-list-title"
+                class="section-title"
+                style="margin: 0; border: 0; font-size: 1.5rem"
+              ></h2>
+              <button id="map-files-btn" class="action-btn hidden">
+                <i class="fas fa-link"></i>
+              </button>
+            </div>
+            <ul id="details-item-list" class="item-list chapter-list"></ul>
+          </div>
+        </div>
+      </main>
     </div>
 
     <!-- ======== VIEW 3: INTEGRATED PLAYER (ANIME) ======== -->
@@ -394,7 +497,7 @@
           class="action-btn"
           style="margin-left: auto"
         >
-          <i class="fas fa-list-ul"></i> Episodes
+          <i class="fas fa-list-ul"></i>
         </button>
       </header>
       <main class="player-main">
@@ -405,7 +508,7 @@
           <div class="shelf-header">
             <h3 class="section-title" style="margin: 0; border: 0">Episodes</h3>
             <button id="next-episode-btn" class="action-btn">
-              <i class="fas fa-step-forward"></i> Next
+              <i class="fas fa-step-forward"></i>
             </button>
           </div>
           <div id="shelf-item-list" class="item-list"></div>
@@ -414,28 +517,8 @@
     </div>
 
     <!-- ======== VIEW 4: PDF READER (MANGA) ======== -->
-    <div id="pdf-reader-view" class="app-view hidden">
-      <header class="player-header">
-        <button class="back-btn" data-target-view="details-view">
-          <i class="fas fa-arrow-left"></i>
-        </button>
-        <div class="player-title">
-          <span id="pdf-series-title"></span> -
-          <span id="pdf-chapter-title"></span>
-        </div>
-      </header>
-      <main id="pdf-reader-main">
-        <canvas id="pdf-canvas"></canvas>
-      </main>
-      <footer class="pdf-controls">
-        <button id="pdf-prev" class="action-btn">
-          <i class="fas fa-chevron-left"></i>
-        </button>
-        <span id="pdf-page-num"></span> / <span id="pdf-page-count"></span>
-        <button id="pdf-next" class="action-btn">
-          <i class="fas fa-chevron-right"></i>
-        </button>
-      </footer>
+    <div id="pdf-reader-view" class="hidden" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 100; background-color: var(--bg-primary);">
+      <iframe id="pdf-iframe" src="about:blank" style="border: none; width: 100%; height: 100%;"></iframe>
     </div>
 
     <!-- ======== VIEW 5: LIST DETAILS ======== -->
@@ -476,21 +559,14 @@
         const legacyFolderInput = document.getElementById(
           "legacy-folder-input"
         );
-        const pdfState = { pdfDoc: null, pageNum: 1, loadingTask: null };
 
         // --- VIEW CONTROLLER ---
         function cleanupResources() {
           activeObjectUrls.forEach((url) => URL.revokeObjectURL(url));
           activeObjectUrls.clear();
-          if (pdfState.pdfDoc) {
-            pdfState.pdfDoc
-              .destroy()
-              .catch((e) => console.error("Error destroying PDF doc", e));
-            pdfState.pdfDoc = null;
-          }
-          if (pdfState.loadingTask && pdfState.loadingTask.destroy) {
-            pdfState.loadingTask.destroy();
-            pdfState.loadingTask = null;
+          const iframe = document.getElementById('pdf-iframe');
+          if (iframe) {
+            iframe.src = 'about:blank';
           }
         }
 
@@ -756,7 +832,6 @@ ${e.message}`, 'error');
             return `
                 <div class="grid-item" data-id="${id}" data-type="${dataType}" ${malIdAttr} style="position:relative;">
                     <img src="${posterUrl}" alt="${title}" class="grid-item-poster">
-                    ${mangaTag}
                     <p class="grid-item-title ${isList ? "list-grid-item-title" : ""}">${title}</p>
                 </div>`;
         }
@@ -774,12 +849,23 @@ ${e.message}`, 'error');
                 activeObjectUrls.add(posterUrl);
             }
 
-            document.getElementById("hero-section").style.backgroundImage = `url(${posterUrl})`;
-            document.getElementById("details-poster").src = posterUrl;
+            const heroSection = document.getElementById("hero-section");
+            const verticalTitleJp = document.getElementById("vertical-title-jp");
+            const coverArtContainer = heroSection.querySelector(".cover-art-container");
+
+            heroSection.style.backgroundImage = `url(${posterUrl})`;
+            document.getElementById("manga-cover").src = posterUrl;
             document.getElementById("details-title-en").textContent = series.title;
-            document.getElementById("details-title-jp").textContent = series.original_title || '';
+            const originalTitle = series.original_title || '';
+            document.getElementById("details-title-jp").textContent = originalTitle;
+            verticalTitleJp.textContent = originalTitle.slice(0, 10);
             document.getElementById("details-synopsis").textContent = series.synopsis || "No synopsis available.";
             
+            setTimeout(() => {
+              verticalTitleJp.classList.add("loaded");
+              coverArtContainer.classList.add("loaded");
+            }, 100);
+
             const itemsKey = type === "anime" ? "episodes" : "chapters";
             const itemListEl = document.getElementById("details-item-list");
             const itemListTitle = document.getElementById("details-item-list-title");
@@ -792,7 +878,7 @@ ${e.message}`, 'error');
                 itemListTitle.textContent = itemsKey.charAt(0).toUpperCase() + itemsKey.slice(1);
                 const items = series[itemsKey] || [];
                 if (items.length === 0) {
-                     itemListEl.innerHTML = `<p style="color: var(--text-secondary);">No ${itemsKey} found in metadata.</p>`;
+                     itemListEl.innerHTML = `<p style="color: var(--text-secondary); padding: 20px;">No ${itemsKey} found in metadata.</p>`;
                      return;
                 }
                 items.sort((a, b) => (a.episode || a.chapter) - (b.episode || b.chapter))
@@ -802,13 +888,14 @@ ${e.message}`, 'error');
                         const li = document.createElement('li');
                         li.className = 'chapter-item';
                         li.dataset.itemNum = itemNum;
+                        const iconClass = type === 'anime' ? 'fa-play' : 'fa-book-open';
                         li.innerHTML = `
-                            <div class="chapter-thumbnail" style="background-image: url('${item.image || ''}')">
-                                <div class="chapter-number-display">${itemNum}</div>
-                            </div>
                             <div class="chapter-details">
                                 <p class="chapter-title">${item.title || "No Title"}</p>
                                 <p class="chapter-meta">${type === 'anime' ? 'Episode' : 'Chapter'} ${itemNum}</p>
+                            </div>
+                            <div class="chapter-actions">
+                                <i class="fas ${iconClass}"></i>
                             </div>
                         `;
                         itemListEl.appendChild(li);
@@ -829,16 +916,17 @@ ${e.message}`, 'error');
                         const li = document.createElement('li');
                         li.className = 'chapter-item';
                         li.dataset.rawFileIndex = index;
+                        const iconClass = type === 'anime' ? 'fa-play' : 'fa-book-open';
                         li.innerHTML = `
                             <div class="chapter-details">
                                 <p class="chapter-title">${file.name}</p>
                             </div>
-                            <div class="chapter-actions"><i class="fas fa-play"></i></div>
+                            <div class="chapter-actions"><i class="fas ${iconClass}"></i></div>
                         `;
                         itemListEl.appendChild(li);
                     });
                 } else {
-                    itemListEl.innerHTML = `<p style="color: var(--text-secondary);">No local files found for this series.</p>`;
+                    itemListEl.innerHTML = `<p style="color: var(--text-secondary); padding: 20px;">No local files found for this series.</p>`;
                 }
                 setTimeout(() => mapSeriesFiles(seriesId, type), 500);
             }
@@ -957,9 +1045,6 @@ ${e.message}`, 'error');
             }
         }
 
-        const pdfCanvas = document.getElementById("pdf-canvas");
-        const pdfCtx = pdfCanvas.getContext("2d");
-
         async function renderPdfReaderView(seriesId, type, itemNum, rawFileIndex = null) {
             const series = libraryData[type][seriesId];
             const itemsKey = "chapters";
@@ -975,38 +1060,27 @@ ${e.message}`, 'error');
 
             if (!series || !currentFile) return showView("details", seriesId, type);
 
-            document.getElementById("pdf-series-title").textContent = series.title;
-            document.getElementById("pdf-chapter-title").textContent = `Chapter ${currentItem.chapter} - ${currentItem.title || ""}`;
+            const chapterTitleText = `Chapter ${currentItem.chapter} - ${currentItem.title || ""}`;
 
-            try {
-                const fileData = await currentFile.arrayBuffer();
-                pdfState.loadingTask = pdfjsLib.getDocument(fileData);
-                pdfState.pdfDoc = await pdfState.loadingTask.promise;
-                pdfState.pageNum = 1;
-                renderPdfPage(pdfState.pageNum);
-            } catch (e) {
-                window.parent.showToast("Error loading PDF: " + e.message, 'error');
-                showView("details", seriesId, type);
-            }
-        }
+            const iframe = document.getElementById('pdf-iframe');
+            iframe.src = 'about:blank'; // Ensures onload fires consistently
+            iframe.src = `pdf.html?embedded=true`; 
 
-        function renderPdfPage(num) {
-          if (!pdfState.pdfDoc) return;
-          pdfState.pdfDoc.getPage(num).then((page) => {
-            const container = document.getElementById("pdf-reader-main");
-            const scale = Math.min(
-              2,
-              container.clientWidth / page.getViewport({ scale: 1.0 }).width
-            );
-            const viewport = page.getViewport({ scale: scale });
-
-            pdfCanvas.height = viewport.height;
-            pdfCanvas.width = viewport.width;
-            page.render({ canvasContext: pdfCtx, viewport: viewport });
-          });
-          document.getElementById("pdf-page-num").textContent = num;
-          document.getElementById("pdf-page-count").textContent =
-            pdfState.pdfDoc.numPages;
+            iframe.onload = async () => {
+                try {
+                    const fileData = await currentFile.arrayBuffer();
+                    iframe.contentWindow.postMessage({
+                        type: 'load-pdf',
+                        fileData: fileData,
+                        fileName: currentFile.name,
+                        seriesTitle: series.title,
+                        chapterTitle: chapterTitleText
+                    }, '*', [fileData]);
+                } catch (e) {
+                    window.parent.showToast("Error loading PDF: " + e.message, 'error');
+                    showView("details", seriesId, type);
+                }
+            };
         }
 
         function loadLists() {
@@ -1019,6 +1093,16 @@ ${e.message}`, 'error');
         }
 
         // --- EVENT LISTENERS ---
+        window.addEventListener('message', (event) => {
+            if (event.data && event.data.type === 'pdf-reader-back') {
+                if (currentSeriesId) {
+                    showView('details', currentSeriesId.seriesId, currentSeriesId.type);
+                } else {
+                    showView('main');
+                }
+            }
+        });
+
         document.body.addEventListener("click", (e) => {
           const backBtn = e.target.closest(".back-btn");
           if (backBtn) {
@@ -1097,17 +1181,7 @@ ${e.message}`, 'error');
             );
           });
 
-        document.getElementById("pdf-prev").addEventListener("click", () => {
-          if (pdfState.pageNum <= 1) return;
-          pdfState.pageNum--;
-          renderPdfPage(pdfState.pageNum);
-        });
-        document.getElementById("pdf-next").addEventListener("click", () => {
-          if (pdfState.pdfDoc && pdfState.pageNum >= pdfState.pdfDoc.numPages)
-            return;
-          pdfState.pageNum++;
-          renderPdfPage(pdfState.pageNum);
-        });
+        
 
         // --- INITIALIZATION ---
         showView("main");
