@@ -1080,7 +1080,7 @@ async def generic_proxy(
     if not url:
         raise HTTPException(status_code=400, detail="Missing URL parameter")
 
-    # 1. Setup Headers
+    # 1. Setup Headers (Mimic Chrome)
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
         "Accept": "*/*",
@@ -1103,22 +1103,25 @@ async def generic_proxy(
     if "range" in request.headers:
         headers["Range"] = request.headers["range"]
 
-    # 2. Use "chrome110" for compatibility
+    # 2. Initialize Session
     s = AsyncSession(impersonate="chrome110", verify=False)
 
     try:
+        # Start the request with stream=True
         r = await s.get(url, headers=headers, stream=True, timeout=20)
         
-        # 3. FIX: Handle Upstream Errors without .read()
+        # 3. Handle Upstream Errors (4xx/5xx)
         if r.status_code >= 400:
             content = b""
-            # Manually consume the stream to get the error message
+            # Manually read content since .read() doesn't exist
             async for chunk in r.aiter_content():
                 content += chunk
-            await s.close()
+            
+            # Close session synchronously (Fix for NoneType error)
+            s.close()
             return Response(status_code=r.status_code, content=content)
 
-        # Filter Headers
+        # 4. Prepare Response Headers
         excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'host']
         response_headers = {
             k: v for k, v in r.headers.items()
@@ -1127,7 +1130,7 @@ async def generic_proxy(
         
         response_headers["Access-Control-Allow-Origin"] = "*"
 
-        # 4. Stream Generator with Cleanup
+        # 5. Stream Generator
         async def stream_content():
             try:
                 async for chunk in r.aiter_content():
@@ -1135,8 +1138,13 @@ async def generic_proxy(
             except Exception as e:
                 print(f"Stream Error: {e}")
             finally:
-                await s.close()
+                # Close session synchronously (Fix for NoneType error)
+                try:
+                    s.close()
+                except:
+                    pass
 
+        # 6. Return Streaming Response
         return StreamingResponse(
             stream_content(),
             status_code=r.status_code,
@@ -1145,9 +1153,9 @@ async def generic_proxy(
         )
 
     except Exception as e:
-        # Graceful cleanup
+        # Cleanup on failure
         try:
-            await s.close()
+            s.close()
         except:
             pass
         
