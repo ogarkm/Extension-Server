@@ -1082,7 +1082,6 @@ async def generic_proxy(
 
     # 1. Setup Headers
     headers = {
-        # Changed UA to Chrome 110 to match the impersonate setting
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
         "Accept": "*/*",
         "Accept-Language": "en-US,en;q=0.9",
@@ -1104,15 +1103,18 @@ async def generic_proxy(
     if "range" in request.headers:
         headers["Range"] = request.headers["range"]
 
-    # 2. FIX: Use "chrome110" (Supported by your version)
+    # 2. Use "chrome110" for compatibility
     s = AsyncSession(impersonate="chrome110", verify=False)
 
     try:
         r = await s.get(url, headers=headers, stream=True, timeout=20)
         
-        # Handle Upstream Errors
+        # 3. FIX: Handle Upstream Errors without .read()
         if r.status_code >= 400:
-            content = await r.read()
+            content = b""
+            # Manually consume the stream to get the error message
+            async for chunk in r.aiter_content():
+                content += chunk
             await s.close()
             return Response(status_code=r.status_code, content=content)
 
@@ -1125,7 +1127,7 @@ async def generic_proxy(
         
         response_headers["Access-Control-Allow-Origin"] = "*"
 
-        # 3. Stream Generator with Cleanup
+        # 4. Stream Generator with Cleanup
         async def stream_content():
             try:
                 async for chunk in r.aiter_content():
@@ -1133,7 +1135,6 @@ async def generic_proxy(
             except Exception as e:
                 print(f"Stream Error: {e}")
             finally:
-                # Close the session only after streaming is finished
                 await s.close()
 
         return StreamingResponse(
@@ -1144,14 +1145,13 @@ async def generic_proxy(
         )
 
     except Exception as e:
-        # Graceful cleanup if the request fails immediately
+        # Graceful cleanup
         try:
             await s.close()
         except:
             pass
         
         print(f"Proxy Connection Failed: {e}")
-        # Return error as text so you can see it in browser/console
         return Response(content=f"Proxy Error: {str(e)}", status_code=500)
 
 # --- Jikan Endpoints ---
