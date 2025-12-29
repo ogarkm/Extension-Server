@@ -9,6 +9,7 @@ fpdf2
 python-multipart
 mangakatana
 hmtai
+curl-cffi==0.5.10
 # Auto-generated module & extension requirements
 beautifulsoup4
 httpx

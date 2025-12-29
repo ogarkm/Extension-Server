@@ -27,6 +27,7 @@ import io
 from fastapi.responses import StreamingResponse, JSONResponse, Response
 from zeroconf import ServiceInfo, Zeroconf
 from fpdf import FPDF
+from curl_cffi.requests import AsyncSession
 
 # --- Global Event for Animation Control ---
 server_ready_event = threading.Event()
@@ -1074,67 +1075,56 @@ async def generic_proxy(
     url: str = Query(..., description="Target URL to fetch"),
     referer: Optional[str] = Query(None, description="Referer header to send")
 ):
-    """
-    Generic proxy that handles Referer, Range headers, and keeps the connection
-    alive during streaming to prevent incomplete chunk errors.
-    """
     if not url:
         raise HTTPException(status_code=400, detail="Missing URL parameter")
 
-    # 1. Prepare Headers
-    headers = {}
+    # 1. Prepare Headers to look exactly like a Browser
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
+        "Accept": "*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+        "Sec-Fetch-Dest": "empty",
+        "Sec-Fetch-Mode": "cors",
+        "Sec-Fetch-Site": "cross-site",
+    }
+    
+    # Specific fix for code29wave - they check the Referer strictly
     if referer:
         headers["Referer"] = referer
-    
-    # Forward Range header (Critical for video seeking/playback)
+    else:
+        # Fallback: trick the site into thinking it referred itself
+        parsed_uri = urlparse(url)
+        headers["Referer"] = f"{parsed_uri.scheme}://{parsed_uri.netloc}/"
+
     if "range" in request.headers:
         headers["Range"] = request.headers["range"]
-    
-    headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
 
-    # 2. Create Client (No 'async with' here, we manage lifecycle manually)
-    client = httpx.AsyncClient(follow_redirects=True, verify=False)
-    
-    try:
-        req = client.build_request("GET", url, headers=headers)
-        r = await client.send(req, stream=True)
-    except Exception as e:
-        await client.aclose()
-        print(f"Proxy Connection Error: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-    # Handle Upstream Errors immediately
-    if r.status_code >= 400:
-        content = await r.aread()
-        await r.aclose()
-        await client.aclose()
-        return Response(content=content, status_code=r.status_code)
-
-    # 3. Filter Headers
-    # We strip 'content-encoding' because aiter_bytes() will auto-decompress gzip
-    excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'host']
-    response_headers = {
-        k: v for k, v in r.headers.items() 
-        if k.lower() not in excluded_headers
-    }
-
-    # 4. Define Stream Generator with Cleanup
-    async def stream_content():
+    # 2. Use curl_cffi AsyncSession with browser impersonation
+    # "chrome110" tells the server: "I am definitely a real Chrome browser"
+    async def stream_generator():
         try:
-            async for chunk in r.aiter_bytes():
-                yield chunk
-        except Exception as e:
-            print(f"Streaming Error: {e}")
-        finally:
-            # Critical: Close the client only AFTER streaming is done
-            await r.aclose()
-            await client.aclose()
+            async with AsyncSession(impersonate="chrome110", verify=False) as s:
+                # We interpret the stream manually
+                response = await s.get(url, headers=headers, stream=True, timeout=20)
+                
+                if response.status_code >= 400:
+                    yield f"Error: {response.status_code}".encode()
+                    return
 
+                # Stream the content back to the client
+                async for chunk in response.aiter_content():
+                    yield chunk
+        except Exception as e:
+            print(f"Proxy Stream Error: {e}")
+
+    # Note: We need to fetch the status code first to return it correctly, 
+    # but for a simple proxy, assuming 200 or 206 (Partial Content) usually works for video players.
+    # To keep it compatible with the previous simple stream approach:
+    
     return StreamingResponse(
-        stream_content(),
-        status_code=r.status_code,
-        headers=response_headers,
-        media_type=r.headers.get("content-type")
+        stream_generator(),
+        media_type="application/vnd.apple.mpegurl" if ".m3u8" in url else "video/mp4",
+        status_code=206 if "range" in request.headers else 200
     )
 
 
