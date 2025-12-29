@@ -1066,12 +1066,7 @@ async def proxy_mangadex_image(server_host: str, chapter_hash: str, filename: st
             raise HTTPException(status_code=e.response.status_code, detail=f"MangaDex image proxy error: {e.response.text}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred while proxying image: {str(e)}")
-        
-# --- UPDATE THIS IN app.py ---
 
-# --- UPDATE THIS IN app.py ---
-
-# --- UPDATE THIS IN app.py ---
 
 @app.get("/proxy")
 async def generic_proxy(
