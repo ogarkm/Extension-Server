@@ -51,7 +51,8 @@
         left: 0;
         width: 100%;
         z-index: 1000;
-        padding: 20px 40px; /* More padding for desktop */
+        /* ALIGNMENT FIX: Changed padding to 6% to match Hero/Content gutter */
+        padding: 20px 6%; 
         background: linear-gradient(
           to bottom,
           rgba(0, 0, 0, 0.8) 0%,
@@ -62,6 +63,9 @@
         transition: background 0.4s ease-out, backdrop-filter 0.4s ease-out,
           padding 0.4s ease;
         box-sizing: border-box;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start; /* Default desktop alignment */
       }
 
       .navbar.scrolled {
@@ -69,12 +73,12 @@
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 15px 40px; /* Compact on scroll */
+        padding: 15px 6%; /* Compact on scroll, keeping alignment */
       }
 
       .navbar svg {
         display: block;
-        margin: 0; /* Aligned left for desktop usually, or keep centered if intended */
+        margin: 0; 
         height: 40px;
         width: auto;
         opacity: 0.9;
@@ -88,12 +92,12 @@
       /* --- Hero Section Cinematic Carousel --- */
       #hero-section {
         position: relative;
-        height: 65vh; /* Taller, cinematic height */
+        height: 65vh; 
         min-height: 600px;
         display: flex;
         flex-direction: column;
-        justify-content: center; /* Center content vertically */
-        padding: 0 6%; /* Horizontal gutter */
+        justify-content: center; 
+        padding: 0 6%; /* Horizontal gutter matches Navbar now */
         box-sizing: border-box;
         overflow: hidden;
       }
@@ -110,7 +114,6 @@
         transform: scale(1);
       }
 
-      /* Subtle zoom effect on active background */
       #hero-section:hover .hero-background {
         transform: scale(1.02);
       }
@@ -119,7 +122,6 @@
         content: "";
         position: absolute;
         inset: 0;
-        /* Complex gradient: Darker on left for text readability, fading to bottom */
         background: radial-gradient(
             circle at 70% 20%,
             transparent 0%,
@@ -144,12 +146,12 @@
       .hero-content {
         position: relative;
         z-index: 10;
-        text-align: left; /* Left align for desktop */
+        text-align: left; 
         display: flex;
         flex-direction: column;
-        align-items: flex-start; /* Left align items */
+        align-items: flex-start; 
         gap: 20px;
-        max-width: 50%; /* Restrict width so it doesn't span full screen */
+        max-width: 50%; 
         opacity: 0;
         transform: translateY(30px);
         transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -163,7 +165,7 @@
 
       /* --- Hero Logo --- */
       .hero-logo {
-        max-width: 400px; /* Larger logo for desktop */
+        max-width: 400px; 
         max-height: 200px;
         width: 100%;
         object-fit: contain;
@@ -173,38 +175,28 @@
       }
 
       .hero-title {
-        font-size: 3.5rem; /* Larger font */
+        font-size: 3.5rem; 
         font-weight: 800;
         text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
         margin: 0;
         line-height: 1.1;
-        display: none; /* Often hidden if Logo is present, remove this line if no logo */
+        display: none; 
       }
 
       .hero-subtitle {
-        font-size: 1rem; /* Slightly smaller for compactness */
+        font-size: 1.1rem; 
         font-weight: 700;
         color: #e0e0e0;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-        max-width: 90%; /* Wider on mobile to fit text */
+        max-width: 600px; 
         line-height: 1.4;
-        margin-bottom: 5px; /* Pull buttons closer to text */
-
-        /* Truncate text if it somehow gets too long */
+        margin-bottom: 0; 
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
       }
 
-      /* Desktop Adjustment */
-      @media (min-width: 768px) {
-        .hero-subtitle {
-          font-size: 1.1rem;
-          max-width: 600px;
-          margin-bottom: 0;
-        }
-      }
       .hero-buttons {
         margin-top: 25px;
         display: flex;
@@ -227,7 +219,6 @@
         border: 1px solid transparent;
       }
 
-      /* Play Button: High Contrast */
       .hero-btn.play-btn {
         background-color: #ff9500;
         color: #fff;
@@ -240,7 +231,6 @@
         box-shadow: 0 0 30px rgba(255, 149, 0, 0.4);
       }
 
-      /* Info Button: Glassmorphism */
       .hero-btn.info-btn {
         background-color: rgba(100, 100, 100, 0.4);
         color: #ffffff;
@@ -256,7 +246,7 @@
       /* --- Hero Dots Navigation --- */
       .hero-dots {
         position: absolute;
-        right: 6%; /* Right aligned for desktop usually */
+        right: 6%; 
         bottom: 40px;
         left: auto;
         transform: none;
@@ -282,6 +272,46 @@
 
       .hero-dot:hover {
         background-color: rgba(255, 255, 255, 0.8);
+      }
+
+      /* --- MEDIA QUERIES (RESPONSIVENESS) --- */
+      @media (max-width: 768px) {
+        /* Center Navbar Logo */
+        .navbar {
+            justify-content: center;
+            padding: 15px 6%;
+        }
+
+        /* Hero Adjustments */
+        .hero-content {
+            align-items: center; /* Center Items */
+            text-align: center;  /* Center Text */
+            max-width: 100%;     /* Full width */
+        }
+
+        .hero-logo {
+            object-position: center bottom; /* Center Logo Image */
+            max-width: 80%; /* Adjust size */
+            margin-bottom: 20px;
+        }
+
+        /* Hide Synopsis */
+        .hero-subtitle {
+            display: none;
+        }
+
+        /* Center Buttons */
+        .hero-buttons {
+            justify-content: center;
+        }
+
+        /* Adjust Dots for Mobile */
+        .hero-dots {
+            left: 50%;
+            right: auto;
+            transform: translateX(-50%);
+            bottom: 20px;
+        }
       }
 
       /* --- Loader --- */
@@ -312,7 +342,6 @@
         z-index: 5;
       }
 
-      /* Pull the first section up slightly to overlap hero gradient */
       .content-section:first-of-type {
         margin-top: -60px;
       }
@@ -339,8 +368,8 @@
       .horizontal-scroll-container {
         display: flex;
         overflow-x: auto;
-        overflow-y: visible; /* Allow hover effects to pop out */
-        padding: 20px 0 40px 0; /* Padding for shadows */
+        overflow-y: visible; 
+        padding: 20px 0 40px 0; 
         gap: 20px;
         scroll-behavior: smooth;
         mask-image: linear-gradient(to right, black 95%, transparent 100%);
@@ -351,7 +380,6 @@
         );
       }
 
-      /* Hide Scrollbar */
       .horizontal-scroll-container::-webkit-scrollbar {
         display: none;
       }
@@ -360,10 +388,10 @@
         scrollbar-width: none;
       }
 
-      /* --- Poster Cards (Desktop Friendly) --- */
+      /* --- Poster Cards --- */
       .poster-container {
         flex-shrink: 0;
-        width: 220px; /* Wider for desktop */
+        width: 220px; 
         position: relative;
         transition: z-index 0.3s, transform 0.3s;
       }
@@ -372,12 +400,12 @@
         position: relative;
         border-radius: 12px;
         overflow: hidden;
-        aspect-ratio: 2/3; /* Standard Poster Ratio */
+        aspect-ratio: 2/3; 
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         transition: transform 0.4s var(--transition-smooth),
           box-shadow 0.4s var(--transition-smooth), border-color 0.3s;
-        border: 2px solid transparent; /* Prepare for border on hover */
-        background-color: #2a2a2a; /* Placeholder color */
+        border: 2px solid transparent; 
+        background-color: #2a2a2a; 
       }
 
       .poster-image-wrapper img {
@@ -387,9 +415,8 @@
         transition: filter 0.3s;
       }
 
-      /* Hover Effects - The "Pop" */
       .poster-container:hover {
-        z-index: 100; /* Bring to front */
+        z-index: 100; 
       }
 
       .poster-container:hover .poster-image-wrapper {
@@ -438,7 +465,7 @@
       .episode-indicator {
         position: absolute;
         top: 10px;
-        right: 10px; /* Right side looks cleaner on posters */
+        right: 10px; 
         left: auto;
         background-color: rgba(0, 0, 0, 0.6);
         color: #fff;
@@ -456,7 +483,7 @@
       .poster-info-btn {
         position: absolute;
         top: 10px;
-        left: 10px; /* Moved to left to balance Episode Badge */
+        left: 10px; 
         right: auto;
         z-index: 3;
         background-color: rgba(30, 30, 30, 0.8);
@@ -467,7 +494,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        opacity: 0; /* Hidden by default */
+        opacity: 0; 
         transform: translateY(-10px);
         transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -494,7 +521,7 @@
         -webkit-backdrop-filter: blur(8px);
         display: flex;
         justify-content: center;
-        align-items: center; /* Center on screen for desktop */
+        align-items: center; 
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s;
@@ -505,7 +532,6 @@
         visibility: visible;
       }
 
-      /* Transforms from bottom sheet to centered modal */
       .context-menu {
         width: 380px;
         max-width: 90%;
@@ -561,10 +587,9 @@
       }
 
       .context-menu-item:not(:last-child) {
-        border-bottom: none; /* Removed borders for cleaner look */
+        border-bottom: none; 
       }
 
-      /* Cancel button logic for desktop modal */
       .context-menu-item.context-menu-cancel {
         margin-top: 8px;
         border-top: 1px solid rgba(255, 255, 255, 0.05);
@@ -587,7 +612,8 @@
   </head>
   <body>
     <nav class="navbar">
-      <div style="height: 40px; margin-left: 8px">
+      <!-- ALIGNMENT FIX: Removed inline style "margin-left: 8px" -->
+      <div style="height: 40px;">
         <svg
           width="1304"
           height="416"

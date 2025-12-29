@@ -77,7 +77,7 @@ def register_service():
         port = 7275
         service_info = ServiceInfo(
             "_http._tcp.local.",
-            f"Animex Extension API @ {host_name}._http._tcp.local.",
+            f"Animex @ {host_name}._http._tcp.local.",
             addresses=[socket.inet_aton(host_ip)],
             port=port,
             properties={'app': 'animex-extension-api'},

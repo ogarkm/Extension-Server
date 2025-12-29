@@ -12,14 +12,15 @@
             "id": 51009,
             "name": "Jujutsu Kaisen: Shibuya Incident",
             "synopsis": "Halloween in Shibuya. Sorcerers rush to break a massive barrier, unaware of a deadly trap set to seal Satoru Gojo.",
-            "image": "https://images4.alphacoders.com/138/1389939.jpg",
+            "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=1920/keyart/GRDV0019R-backdrop_wide",
+            "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GRDV0019R-backdrop_tall",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GRDV0019R-title_logo-en-us"
         },
         {
             "id": 52991,
             "name": "Frieren: Beyond Journey's End",
             "synopsis": "Elf mage Frieren retraces her past adventure, confronting the passage of time and the meaning of life after the hero's death.",
-            "image": "https://res.cloudinary.com/dsa5iolcx/image/upload/v1752203413/frieren.jpg",
+            "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=1920/keyart/GG5H5XQX4-backdrop_wide",
             "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GG5H5XQX4-backdrop_tall",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GG5H5XQX4-title_logo-en-us"
         },
