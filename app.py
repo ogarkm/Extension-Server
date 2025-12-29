@@ -445,6 +445,11 @@ def identify_server():
 async def get_status():
     return {"status": "online"}
 
+@app.get("/health")
+async def health_check():
+    """Returns the health status of the API."""
+    return {"health": "ok"}
+
 
 @app.get("/export/series/{mal_id}")
 async def export_series_package(mal_id: int, type: str = Query(..., enum=["anime", "manga"])):
