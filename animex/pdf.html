@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animex PDF Reader</title>
+    
+    <!-- PDF.js Library from CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
+
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+
+    <style>
+        :root {
+            --primary-bg: #121212;
+            --secondary-bg: rgba(30, 30, 30, 0.9);
+            --text-color: #e0e0e0;
+            --accent-color: #FF9500;
+            --border-color: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --icon-fill: #e0e0e0;
+            --header-height: 55px;
+            --footer-height: 60px;
+        }
+        html, body {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--primary-bg); color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow: hidden;
+        }
+        #app-container { display: flex; flex-direction: column; height: 100vh; width: 100vw; position: relative; }
+
+        /* --- Welcome/Message Screen --- */
+        #message-container {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            background-color: var(--primary-bg); z-index: 100;
+            flex-direction: column; padding: 20px; box-sizing: border-box; text-align: center;
+        }
+        .loader {
+            border: 5px solid var(--border-color); border-top: 5px solid var(--accent-color);
+            border-radius: 50%; width: 50px; height: 50px;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        #file-input-button {
+            background-color: var(--accent-color); color: #121212; border: none; padding: 12px 24px;
+            border-radius: 8px; font-size: 16px; font-weight: 600; cursor: pointer; display: none; margin-top: 15px;
+            transition: transform 0.2s ease, background-color 0.2s ease;
+        }
+        #file-input-button:hover { background-color: #ffae42; transform: scale(1.05); }
+        #file-input { display: none; }
+
+        /* --- Viewer --- */
+        #viewer-container {
+            flex-grow: 1; position: relative; overflow: auto;
+            display: flex; justify-content: center;
+            padding-top: calc(var(--header-height) + 20px);
+            padding-bottom: calc(var(--footer-height) + 20px);
+            box-sizing: border-box;
+        }
+        #pdf-container canvas {
+            display: block; margin: 0 auto;
+            max-width: 100%; height: auto;
+            transition: box-shadow 0.3s ease;
+        }
+        #pdf-container.paged-view canvas {
+            margin-bottom: 30px;
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+        #pdf-container.webtoon-view canvas {
+            margin-bottom: 0px;
+        }
+
+
+        /* --- Controls --- */
+        .controls-bar {
+            position: fixed; left: 0; width: 100%;
+            background-color: var(--secondary-bg);
+            backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+            box-shadow: 0 0 15px var(--shadow-color);
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 0 20px; box-sizing: border-box; z-index: 20;
+            transition: transform 0.3s ease-in-out;
+            -webkit-tap-highlight-color: transparent;
+        }
+        #header { top: 0; height: var(--header-height); border-bottom: 1px solid var(--border-color);}
+        #footer { bottom: 0; height: var(--footer-height); border-top: 1px solid var(--border-color);}
+        .controls-hidden #header { transform: translateY(-100%); }
+        .controls-hidden #footer { transform: translateY(100%); }
+
+        .control-group { display: flex; align-items: center; gap: 8px; }
+        .control-button {
+            background: none; border: none; color: var(--icon-fill);
+            cursor: pointer; padding: 10px; border-radius: 50%;
+            width: 44px; height: 44px; display: flex; justify-content: center; align-items: center;
+            font-size: 18px; transition: background-color 0.2s ease, color 0.2s ease;
+        }
+        .control-button:hover:not(:disabled) { background-color: rgba(255, 255, 255, 0.1); }
+        .control-button:disabled { color: #666; cursor: not-allowed; }
+        .control-button.active { color: var(--accent-color); background-color: rgba(255, 149, 0, 0.15); }
+        
+        #file-name {
+            font-size: 16px; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: calc(100vw - 400px);
+        }
+        #series-title, #chapter-title {
+            max-width: calc(100vw - 400px);
+        }
+        #page-info { font-size: 16px; min-width: 90px; text-align: center; cursor: pointer; padding: 8px 12px; border-radius: 20px; transition: background-color 0.2s ease; user-select: none; }
+        #page-info:hover { background-color: rgba(255, 255, 255, 0.1); }
+        #page-input { width: 50px; background-color: var(--primary-bg); color: var(--text-color); border: 1px solid var(--accent-color); text-align: center; font-size: 16px; border-radius: 4px; }
+        .divider { width: 1px; height: 25px; background-color: var(--border-color); margin: 0 10px; }
+        
+        @media (max-width: 600px) {
+            #series-title, #chapter-title { max-width: calc(100vw - 250px); }
+            #file-name { display: none; }
+            .divider:not(.mobile-visible) { display: none; }
+            .control-group { gap: 5px; }
+            .controls-bar { padding: 0 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div id="app-container">
+        <!-- Initial Message/Loader -->
+        <div id="message-container">
+            <div id="loader" class="loader"></div>
+            <p id="message-text">Loading...</p>
+            <input type="file" id="file-input" accept="application/pdf" />
+            <button id="file-input-button">Choose a Local PDF</button>
+        </div>
+
+        <!-- PDF Viewer Area -->
+        <div id="viewer-container">
+            <div id="pdf-container"></div>
+        </div>
+
+        <!-- Top Controls -->
+        <header id="header" class="controls-bar">
+            <div class="control-group">
+                <!-- <button id="back-button" class="control-button" title="Back" style="display: none;"><i class="fa-solid fa-arrow-left"></i></button> -->
+                <div style="display: flex; flex-direction: column; align-items: flex-start; margin-left: 10px;">
+                    <span id="series-title" style="font-size: 1em; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
+                    <span id="chapter-title" style="font-size: 0.8em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: 0.8;"></span>
+                </div>
+            </div>
+            <div class="control-group">
+                <button id="view-webtoon-btn" class="control-button" title="Webtoon View"><i class="fa-solid fa-arrows-up-down"></i></button>
+                <button id="view-paged-btn" class="control-button" title="Paged View"><i class="fa-solid fa-file-lines"></i></button>
+                <div class="divider"></div>
+                <button id="rotate-button" class="control-button" title="Rotate Clockwise"><i class="fa-solid fa-rotate-right"></i></button>
+            </div>
+        </header>
+
+        <!-- Bottom Controls -->
+        <footer id="footer" class="controls-bar">
+            <div class="control-group">
+                <button id="zoom-out-button" class="control-button" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                <button id="zoom-fit-width-button" class="control-button" title="Fit to Width"><i class="fa-solid fa-arrows-left-right-to-line"></i></button>
+                <button id="zoom-fit-page-button" class="control-button" title="Fit to Page"><i class="fa-solid fa-up-right-and-down-left-from-center"></i></button>
+                <button id="zoom-in-button" class="control-button" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+            </div>
+            <div id="page-controls" class="control-group">
+                <span id="page-info">0 / 0</span>
+            </div>
+            <div id="progress-bar-container" style="display: none; width: 200px; height: 4px; background-color: var(--border-color); border-radius: 2px; overflow: hidden;">
+                <div id="progress-bar" style="width: 0%; height: 100%; background-color: var(--accent-color);"></div>
+            </div>
+            <div class="control-group" style="min-width: 176px; justify-content: flex-end;">
+                <button id="next-chapter-button" class="control-button" title="Next Chapter" style="display: none;"><i class="fa-solid fa-step-forward"></i></button>
+            </div>
+        </footer>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js`;
+
+        // State variables
+        let pdfDoc = null, currentPageNum = 1, totalPages = 0;
+        let currentScale = 'auto', currentRotation = 0, currentMode = 'paged';
+        let isRendering = false, pdfUrl = null, autoHideTimeout = null;
+        let touchStartX = 0, touchMoveX = 0;
+
+        // DOM elements
+        const appContainer = document.getElementById('app-container');
+        const viewerContainer = document.getElementById('viewer-container');
+        const pdfContainer = document.getElementById('pdf-container');
+        const pageInfo = document.getElementById('page-info');
+        const messageContainer = document.getElementById('message-container');
+        const loader = document.getElementById('loader');
+        const messageText = document.getElementById('message-text');
+        const fileInput = document.getElementById('file-input');
+        const fileInputButton = document.getElementById('file-input-button');
+        const seriesTitleEl = document.getElementById('series-title');
+        const chapterTitleEl = document.getElementById('chapter-title');
+        
+        // --- PDF Loading and Rendering ---
+        async function loadAndRenderPdf(source, seriesTitle, chapterTitle) {
+            try {
+                showLoadingState(`Loading PDF...`);
+                pdfUrl = source;
+                const loadingTask = pdfjsLib.getDocument(source);
+                pdfDoc = await loadingTask.promise;
+                totalPages = pdfDoc.numPages;
+                currentPageNum = 1;
+                currentRotation = 0;
+                
+                seriesTitleEl.textContent = seriesTitle || 'Document';
+                chapterTitleEl.textContent = chapterTitle || '';
+                document.title = seriesTitle ? `${seriesTitle} - ${chapterTitle} - Reader` : 'PDF Reader';
+
+                messageContainer.style.display = 'none';
+                appContainer.classList.remove('controls-hidden');
+
+                await detectAndSetLayout(); // Smart layout detection
+                setupEventListeners();
+                showControls();
+            } catch (error) {
+                console.error("Error loading PDF:", error);
+                showErrorState(`Error: Could not load PDF. Check file/URL.`);
+            }
+        }
+        
+        // Smart feature from Animex
+        async function detectAndSetLayout() {
+            const page = await pdfDoc.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            const isWebtoon = viewport.height > viewport.width * 2;
+            setViewMode(isWebtoon ? 'webtoon' : 'paged', true); // Set mode without re-rendering yet
+            await updateView(); // Now render with the correct mode
+        }
+
+        async function renderPage(num) {
+            if (isRendering) return;
+            isRendering = true;
+            
+            try {
+                const page = await pdfDoc.getPage(num);
+                const scale = await calculateScale();
+                const viewport = page.getViewport({ scale, rotation: currentRotation });
+                
+                const canvasId = `page-${num}`;
+                let canvas = document.getElementById(canvasId);
+                if (!canvas) { return; }
+                
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+                canvas.dataset.rendered = "true";
+            } finally {
+                isRendering = false;
+            }
+        }
+
+        async function updateView() {
+            if (!pdfDoc) return;
+            
+            pdfContainer.innerHTML = '';
+            viewerContainer.scrollTop = 0;
+
+            if (currentMode === 'paged') {
+                viewerContainer.style.overflow = 'hidden';
+                const canvas = document.createElement('canvas');
+                canvas.id = `page-${currentPageNum}`;
+                pdfContainer.appendChild(canvas);
+                await renderPage(currentPageNum);
+            } else { // webtoon mode
+                viewerContainer.style.overflow = 'auto';
+                for (let i = 1; i <= totalPages; i++) {
+                    const canvas = document.createElement('canvas');
+                    canvas.id = `page-${i}`;
+                    pdfContainer.appendChild(canvas);
+                }
+                lazyLoadVisiblePages();
+            }
+            updateControls();
+        }
+
+        async function calculateScale() {
+            const page = await pdfDoc.getPage(1);
+            const viewport = page.getViewport({ scale: 1.0, rotation: currentRotation });
+            const containerWidth = viewerContainer.clientWidth - 30;
+            const containerHeight = viewerContainer.clientHeight - 30;
+
+            if (currentScale === 'auto') {
+                return Math.min(containerWidth / viewport.width, containerHeight / viewport.height);
+            } else if (currentScale === 'width') {
+                return containerWidth / viewport.width;
+            }
+            return currentScale; // It's a number
+        }
+
+        // --- UI and Controls ---
+        function updateControls() {
+            pageInfo.textContent = `PG ${currentPageNum} / ${totalPages}`;
+
+            document.getElementById('view-paged-btn').classList.toggle('active', currentMode === 'paged');
+            document.getElementById('view-webtoon-btn').classList.toggle('active', currentMode === 'webtoon');
+
+            ['zoom-fit-page-button', 'zoom-fit-width-button'].forEach(id => document.getElementById(id).classList.remove('active'));
+            if(currentScale === 'auto') document.getElementById('zoom-fit-page-button').classList.add('active');
+            if(currentScale === 'width') document.getElementById('zoom-fit-width-button').classList.add('active');
+        }
+
+        function showLoadingState(message) {
+            messageContainer.style.display = 'flex';
+            loader.style.display = 'block';
+            fileInputButton.style.display = 'none';
+            messageText.textContent = message;
+        }
+        
+        function showErrorState(message) {
+            loader.style.display = 'none';
+            fileInputButton.style.display = 'block';
+            messageText.innerHTML = message;
+        }
+
+        function showControls() {
+            clearTimeout(autoHideTimeout);
+            appContainer.classList.remove('controls-hidden');
+            autoHideTimeout = setTimeout(() => {
+                if(!document.querySelector('#page-input')) appContainer.classList.add('controls-hidden');
+            }, 3000);
+        }
+
+        // --- Event Handlers ---
+        function goToPrevPage() { if (currentPageNum > 1) { currentPageNum--; updateView(); } }
+        function goToNextPage() { if (currentPageNum < totalPages) { currentPageNum++; updateView(); } }
+        
+        function goToPage(num) {
+            const pageNumber = parseInt(num);
+            if (pageNumber > 0 && pageNumber <= totalPages) {
+                currentPageNum = pageNumber;
+                if (currentMode === 'paged') {
+                    updateView();
+                } else {
+                    document.getElementById(`page-${currentPageNum}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }
+        }
+        
+        function setZoom(type) {
+             if (type === 'in') currentScale = (typeof currentScale !== 'number' ? 1.0 : currentScale) + 0.2;
+             else if (type === 'out') currentScale = Math.max(0.2, (typeof currentScale !== 'number' ? 1.0 : currentScale) - 0.2);
+             else currentScale = type;
+             updateView();
+        }
+
+        function rotate() { currentRotation = (currentRotation + 90) % 360; updateView(); }
+        
+        function setViewMode(mode, isInitial = false) {
+            if (currentMode === mode && !isInitial) return;
+            currentMode = mode;
+            pdfContainer.className = `${mode}-view`;
+
+            const pageControls = document.getElementById('page-controls');
+            const progressBar = document.getElementById('progress-bar-container');
+
+            if (mode === 'webtoon') {
+                pageControls.style.display = 'none';
+                progressBar.style.display = 'block';
+            } else {
+                pageControls.style.display = 'flex';
+                progressBar.style.display = 'none';
+            }
+
+            if (!isInitial) updateView(); // Only re-render if it's a manual switch
+        }
+
+        // --- Lazy Loading for Webtoon Mode ---
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const canvas = entry.target;
+                    const pageNum = parseInt(canvas.id.split('-')[1]);
+                    
+                    if (entry.intersectionRatio > 0.5) {
+                        if (currentPageNum !== pageNum) {
+                            currentPageNum = pageNum;
+                            updateControls();
+                        }
+                    }
+                    if (canvas.dataset.rendered !== "true") renderPage(pageNum);
+                }
+            });
+        }, { root: viewerContainer, threshold: [0.1, 0.5, 0.9] });
+
+        function lazyLoadVisiblePages() {
+            observer.disconnect();
+            pdfContainer.querySelectorAll('canvas').forEach(canvas => observer.observe(canvas));
+        }
+        
+        // --- Setup and Initialization ---
+        function setupEventListeners() {
+            if (setupEventListeners.bound) return;
+            setupEventListeners.bound = true;
+
+            // Header/Footer Controls
+            document.getElementById('view-webtoon-btn').addEventListener('click', () => setViewMode('webtoon'));
+            document.getElementById('view-paged-btn').addEventListener('click', () => setViewMode('paged'));
+            document.getElementById('rotate-button').addEventListener('click', rotate);
+            document.getElementById('zoom-in-button').addEventListener('click', () => setZoom('in'));
+            document.getElementById('zoom-out-button').addEventListener('click', () => setZoom('out'));
+            document.getElementById('zoom-fit-page-button').addEventListener('click', () => setZoom('auto'));
+            document.getElementById('zoom-fit-width-button').addEventListener('click', () => setZoom('width'));
+            
+            pageInfo.addEventListener('click', () => {
+                pageInfo.innerHTML = `<input id="page-input" type="number" min="1" max="${totalPages}" value="${currentPageNum}" />`;
+                const pageInput = document.getElementById('page-input');
+                pageInput.focus(); pageInput.select();
+                const revert = () => { if (document.getElementById('page-input')) updateControls(); };
+                pageInput.addEventListener('blur', revert);
+                pageInput.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') { goToPage(pageInput.value); pageInput.blur(); }
+                    if (e.key === 'Escape') pageInput.blur();
+                });
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.target.tagName === 'INPUT') return;
+                if (e.key === 'ArrowLeft') goToPrevPage();
+                else if (e.key === 'ArrowRight') goToNextPage();
+            });
+
+            ['mousemove', 'mousedown', 'touchstart'].forEach(evt => window.addEventListener(evt, showControls));
+
+            viewerContainer.addEventListener('touchstart', (e) => { if(currentMode === 'paged') { touchStartX = e.changedTouches[0].screenX; touchMoveX = touchStartX; } }, { passive: true });
+            viewerContainer.addEventListener('touchmove', (e) => { if(currentMode === 'paged') { touchMoveX = e.changedTouches[0].screenX; } }, { passive: true });
+            viewerContainer.addEventListener('touchend', () => { if(currentMode === 'paged') { if (touchStartX - touchMoveX > 50) goToNextPage(); else if (touchMoveX - touchStartX > 50) goToPrevPage(); } });
+
+            viewerContainer.addEventListener('scroll', () => {
+                if (currentMode === 'webtoon') {
+                    const { scrollTop, scrollHeight, clientHeight } = viewerContainer;
+                    const scrollPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;
+                    document.getElementById('progress-bar').style.width = `${scrollPercent}%`;
+                }
+            });
+        }
+
+        window.addEventListener('load', () => {
+            const params = new URLSearchParams(window.location.search);
+            const fileUrlParam = params.get('file');
+            const seriesTitleParam = params.get('seriesTitle');
+            const chapterTitleParam = params.get('chapterTitle');
+            const isEmbedded = params.get('embedded');
+            const seriesIdParam = params.get('seriesId');
+            const typeParam = params.get('type');
+            const nextItemNumParam = params.get('nextItemNum');
+
+            if (seriesIdParam && typeParam && nextItemNumParam) {
+                const nextChapterButton = document.getElementById('next-chapter-button');
+                nextChapterButton.style.display = 'flex';
+                nextChapterButton.addEventListener('click', () => {
+                    window.parent.postMessage({ 
+                        type: 'pdf-reader-next', 
+                        seriesId: seriesIdParam, 
+                        type: typeParam, 
+                        itemNum: nextItemNumParam 
+                    }, '*');
+                });
+            }
+
+            if (isEmbedded) {
+                const backButton = document.getElementById('back-button');
+                backButton.style.display = 'flex';
+                backButton.addEventListener('click', () => {
+                    window.parent.postMessage({ type: 'pdf-reader-back' }, '*');
+                });
+
+                // Listen for the PDF data from the parent
+                window.addEventListener('message', (event) => {
+                    if (event.data && event.data.type === 'load-pdf') {
+                        const { fileData, seriesTitle, chapterTitle } = event.data;
+                        // Create a URL that is valid in *this* document's context
+                        const localPdfUrl = URL.createObjectURL(fileData);
+                        loadAndRenderPdf(localPdfUrl, seriesTitle, chapterTitle);
+                    }
+                });
+
+                // Tell the parent that this iframe is ready to receive the file
+                window.parent.postMessage({ type: 'pdf-reader-ready' }, '*');
+
+            } else if (fileUrlParam) {
+                loadAndRenderPdf(fileUrlParam, decodeURIComponent(seriesTitleParam || ''), decodeURIComponent(chapterTitleParam || ''));
+            } else {
+                showErrorState(`Provide a PDF via the <code>?file=...</code> URL parameter, or choose one locally.`);
+            }
+
+            fileInputButton.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', (event) => {
+                const file = event.target.files[0];
+                if (file?.type === 'application/pdf') {
+                    loadAndRenderPdf(URL.createObjectURL(file), file.name, '');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

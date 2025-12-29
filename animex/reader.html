@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Animex - Modern Manga Reader</title>
+    
+    <!-- Google Fonts & Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.2.1/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-dark: #121212;
+            --bg-panel: #1E1E1E;
+            --text-light: #EAEAEA;
+            --text-muted: #8A8A8A;
+            --accent: #FF9500;
+            --border-color: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.5);
+            --border-radius: 12px;
+            --transition-speed: 0.2s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html, body {
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: radial-gradient(circle at top left, #2a2a2d, var(--bg-dark));
+            color: var(--text-light);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-synthesis: none;
+            text-rendering: optimizeLegibility;
+        }
+
+        /* --- Main Layout --- */
+        #app-container {
+            display: flex;
+            height: 100%;
+        }
+
+        #left-panel {
+            flex: 0 0 25%;
+            max-width: 380px;
+            min-width: 280px;
+            background-color: var(--bg-panel);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 5px 0px 25px var(--shadow-color);
+            z-index: 10;
+        }
+
+        #right-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- Left Panel: Library --- */
+        #library-header {
+            padding: 24px;
+            flex-shrink: 0;
+        }
+
+        #library-header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            background: linear-gradient(45deg, var(--accent), #ffbf66);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        #import-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            width: calc(100% - 48px);
+            margin: 0 24px 24px 24px;
+            padding: 14px;
+            background-color: var(--accent);
+            color: #000;
+            font-weight: 600;
+            font-size: 16px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        #import-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 149, 0, 0.3);
+            background-color: #ffae42;
+        }
+
+        #file-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0 10px;
+        }
+
+        #file-list {
+            list-style: none;
+        }
+
+        #file-list li {
+            padding: 16px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background-color var(--transition-speed) ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-left: 4px solid transparent;
+            margin-bottom: 4px;
+        }
+        #file-list li:hover {
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        #file-list li.active {
+            background-color: rgba(255, 149, 0, 0.1);
+            color: var(--accent);
+            font-weight: 500;
+            border-left: 4px solid var(--accent);
+        }
+        
+        /* --- Right Panel: Viewer --- */
+        #viewer-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 16px 30px;
+            background-color: rgba(30, 30, 30, 0.8);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid var(--border-color);
+            flex-shrink: 0;
+            z-index: 5;
+        }
+
+        #document-title {
+            font-size: 18px;
+            font-weight: 500;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            margin-right: 20px;
+        }
+        
+        #viewer-controls {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .control-btn {
+            background-color: rgba(255,255,255,0.08);
+            border: none;
+            color: var(--text-light);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all var(--transition-speed) ease;
+            display: grid;
+            place-items: center;
+            font-size: 16px;
+        }
+        .control-btn:hover {
+            background-color: rgba(255,255,255,0.15);
+            transform: scale(1.1);
+        }
+        .control-btn.active {
+            background-color: var(--accent);
+            color: #000;
+        }
+        
+        #zoom-controls { display: flex; align-items: center; gap: 8px; }
+
+        #zoom-level {
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-muted);
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 20px;
+            min-width: 70px;
+            text-align: center;
+        }
+
+        #pdf-viewer-container {
+            flex: 1;
+            overflow: auto;
+            text-align: center;
+            padding: 40px 0;
+        }
+        
+        #pdf-viewer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        #pdf-viewer.paged-view {
+            gap: 40px;
+        }
+
+        .pdf-page {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        #pdf-viewer.paged-view .pdf-page {
+            box-shadow: 0 15px 35px var(--shadow-color);
+        }
+        
+        #placeholder {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            color: var(--text-muted);
+            user-select: none;
+        }
+
+        #placeholder .fa-solid {
+            font-size: 80px;
+            margin-bottom: 24px;
+            opacity: 0.3;
+        }
+
+        /* --- Custom Scrollbar --- */
+        ::-webkit-scrollbar { width: 12px; }
+        ::-webkit-scrollbar-track { background: var(--bg-panel); }
+        ::-webkit-scrollbar-thumb {
+            background-color: #444;
+            border-radius: 10px;
+            border: 3px solid var(--bg-panel);
+        }
+        ::-webkit-scrollbar-thumb:hover { background-color: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="app-container">
+        <!-- LEFT PANEL -->
+        <aside id="left-panel">
+            <header id="library-header">
+                <h1>Animex</h1>
+            </header>
+            <button id="import-btn">
+                <i class="fa-solid fa-folder-open"></i>
+                <span>Import Folder</span>
+            </button>
+            <div id="file-list-container">
+                <ul id="file-list">
+                    <!-- Files will be dynamically added here -->
+                </ul>
+            </div>
+        </aside>
+
+        <!-- RIGHT PANEL -->
+        <main id="right-panel">
+            <header id="viewer-header">
+                <h2 id="document-title">No file selected</h2>
+                <div id="viewer-controls">
+                    <button id="view-webtoon-btn" class="control-btn" title="Webtoon View (Continuous Scroll)">
+                        <i class="fa-solid fa-arrows-up-down"></i>
+                    </button>
+                    <button id="view-paged-btn" class="control-btn" title="Paged View">
+                        <i class="fa-solid fa-file-lines"></i>
+                    </button>
+                    <div id="zoom-controls">
+                        <button id="zoom-out-btn" class="control-btn" title="Zoom Out"><i class="fa-solid fa-magnifying-glass-minus"></i></button>
+                        <span id="zoom-level">100%</span>
+                        <button id="zoom-in-btn" class="control-btn" title="Zoom In"><i class="fa-solid fa-magnifying-glass-plus"></i></button>
+                    </div>
+                </div>
+            </header>
+            <div id="pdf-viewer-container">
+                <div id="placeholder">
+                    <i class="fa-solid fa-eye"></i>
+                    <h2>Select a folder to start reading</h2>
+                    <p>Your files are processed locally and never uploaded.</p>
+                </div>
+                <div id="pdf-viewer">
+                    <!-- PDF pages (canvases) will be rendered here -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- PDF.js Library -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.min.js"></script>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.12.313/pdf.worker.min.js`;
+
+        const importBtn = document.getElementById('import-btn');
+        const fileList = document.getElementById('file-list');
+        const documentTitle = document.getElementById('document-title');
+        const pdfViewer = document.getElementById('pdf-viewer');
+        const placeholder = document.getElementById('placeholder');
+        const pdfViewerContainer = document.getElementById('pdf-viewer-container');
+        const webtoonViewBtn = document.getElementById('view-webtoon-btn');
+        const pagedViewBtn = document.getElementById('view-paged-btn');
+        const zoomOutBtn = document.getElementById('zoom-out-btn');
+        const zoomInBtn = document.getElementById('zoom-in-btn');
+        const zoomLevelDisplay = document.getElementById('zoom-level');
+        
+        let fileHandles = [];
+        let currentPdf = null;
+        let currentFileHandle = null;
+        let currentPageNum = 1;
+        let zoomLevel = 1.0;
+        let viewMode = 'webtoon';
+
+        importBtn.addEventListener('click', handleImportFolder);
+        
+        fileList.addEventListener('click', (e) => {
+            const li = e.target.closest('li');
+            if (li) {
+                const index = parseInt(li.dataset.index, 10);
+                const handle = fileHandles[index];
+                if (handle && handle !== currentFileHandle) {
+                    loadPdf(handle, index);
+                }
+            }
+        });
+
+        webtoonViewBtn.addEventListener('click', () => setViewMode('webtoon'));
+        pagedViewBtn.addEventListener('click', () => setViewMode('paged'));
+        zoomInBtn.addEventListener('click', () => changeZoom(0.1));
+        zoomOutBtn.addEventListener('click', () => changeZoom(-0.1));
+        window.addEventListener('keydown', handleKeyPress);
+
+        async function handleImportFolder() {
+            try {
+                const dirHandle = await window.showDirectoryPicker();
+                fileHandles = [];
+                for await (const entry of dirHandle.values()) {
+                    if (entry.kind === 'file' && entry.name.toLowerCase().endsWith('.pdf')) {
+                        fileHandles.push(entry);
+                    }
+                }
+                fileHandles.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
+                populateFileList();
+                if (fileHandles.length > 0) {
+                    loadPdf(fileHandles[0], 0);
+                }
+            } catch (err) {
+                if (err.name !== 'AbortError') {
+                    console.error("Error importing folder:", err);
+                    alert('Could not read directory. Please check permissions.');
+                }
+            }
+        }
+
+        function populateFileList() {
+            fileList.innerHTML = '';
+            if (fileHandles.length === 0) {
+                fileList.innerHTML = '<li>No PDF files found.</li>';
+                return;
+            }
+            fileHandles.forEach((handle, index) => {
+                const li = document.createElement('li');
+                li.textContent = handle.name.replace(/\.pdf$/i, '');
+                li.dataset.index = index;
+                fileList.appendChild(li);
+            });
+        }
+        
+        async function loadPdf(fileHandle, index) {
+            currentFileHandle = fileHandle;
+            placeholder.style.display = 'none';
+            pdfViewer.innerHTML = `<h2 style="color: var(--text-muted)">Loading ${fileHandle.name}...</h2>`;
+            pdfViewerContainer.scrollTop = 0;
+            
+            document.querySelectorAll('#file-list li').forEach(li => li.classList.remove('active'));
+            document.querySelector(`#file-list li[data-index="${index}"]`).classList.add('active');
+            documentTitle.textContent = fileHandle.name.replace(/\.pdf$/i, '');
+
+            try {
+                const file = await fileHandle.getFile();
+                const fileReader = new FileReader();
+                fileReader.onload = async (e) => {
+                    const typedarray = new Uint8Array(e.target.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    currentPdf = pdf;
+                    currentPageNum = 1;
+                    await detectAndSetLayout();
+                    await renderPdf();
+                };
+                fileReader.readAsArrayBuffer(file);
+            } catch (err) {
+                console.error("Error loading PDF:", err);
+                pdfViewer.innerHTML = '<h2>Error loading file.</h2>';
+            }
+        }
+
+        async function detectAndSetLayout() {
+            if (!currentPdf) return;
+            const page = await currentPdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1 });
+            setViewMode(viewport.height > viewport.width * 2 ? 'webtoon' : 'paged');
+        }
+
+        async function renderPdf() {
+            if (!currentPdf) return;
+            pdfViewer.innerHTML = '';
+            
+            for (let i = 1; i <= currentPdf.numPages; i++) {
+                const page = await currentPdf.getPage(i);
+                const viewport = page.getViewport({ scale: zoomLevel });
+                
+                const canvas = document.createElement('canvas');
+                canvas.className = 'pdf-page';
+                canvas.id = `page-${i}`;
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+
+                pdfViewer.appendChild(canvas);
+
+                page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                });
+            }
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            pdfViewer.className = mode === 'webtoon' ? 'webtoon-view' : 'paged-view';
+            webtoonViewBtn.classList.toggle('active', mode === 'webtoon');
+            pagedViewBtn.classList.toggle('active', mode === 'paged');
+        }
+
+        function changeZoom(delta) {
+            zoomLevel = Math.max(0.2, Math.min(5, zoomLevel + delta));
+            zoomLevelDisplay.textContent = `${Math.round(zoomLevel * 100)}%`;
+            if (currentPdf) renderPdf();
+        }
+
+        function handleKeyPress(e) {
+            if (!currentPdf || e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+            const viewer = pdfViewerContainer;
+            if (viewMode === 'paged') {
+                const pageHeight = viewer.querySelector('.pdf-page')?.clientHeight + 40 || viewer.clientHeight;
+                if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    viewer.scrollBy({ top: pageHeight, behavior: 'smooth' });
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    viewer.scrollBy({ top: -pageHeight, behavior: 'smooth' });
+                }
+            } else {
+                const scrollAmount = e.shiftKey ? viewer.clientHeight * 0.8 : 300;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    viewer.scrollBy({ top: scrollAmount, behavior: 'smooth' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    viewer.scrollBy({ top: -scrollAmount, behavior: 'smooth' });
+                }
+            }
+        }
+
+        // Initial setup
+        setViewMode('webtoon');
+    </script>
+</body>
+</html>

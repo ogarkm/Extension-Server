@@ -1,0 +1,216 @@
+
+{
+    "name": "9anime Streamer & Downloader",
+    "version": "2.3.0",
+    "author": "Animex",
+    "description": "Fetches streaming URLs and direct download links from 9anime. Supports both streaming and downloading.",
+    "type": [
+        "ANIME_STREAMER",
+        "ANIME_DOWNLOADER"
+    ],
+    "requirements": ["httpx", "beautifulsoup4"]
+}
+---
+import re
+import httpx
+import requests
+from bs4 import BeautifulSoup
+from typing import Optional
+import time
+
+# --- Selenium Imports ---
+from selenium import webdriver
+from selenium.common.exceptions import WebDriverException, JavascriptException, TimeoutException
+
+BASE_URL = "https://9anime.org.lv"
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+    "Referer": BASE_URL
+}
+
+# --- Helper Functions (Adapted from test.py) ---
+
+def get_anime_title_sync(jikan_id: int) -> Optional[str]:
+    """Fetches the English or main title from Jikan API (synchronous)."""
+    url = f"https://api.jikan.moe/v4/anime/{jikan_id}"
+    try:
+        resp = requests.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json().get("data", {})
+        title = data.get("title_english") or data.get("title")
+        return title or None
+    except requests.exceptions.RequestException as e:
+        print(f"9anime-Module: Jikan API request failed: {e}")
+        return None
+
+def slugify_title_for_9anime(title: str) -> str:
+    """Converts a title into a URL-friendly slug for 9anime."""
+    s = re.sub(r"(?i)([a-z0-9])'s\b", r"\1s", title).replace("’", "").replace("'", "")
+    return re.sub(r"-{2,}", "-", re.sub(r"[^a-z0-9]+", "-", s.lower())).strip("-")
+
+def extract_nonce_from_html(html: str) -> Optional[str]:
+    """Extracts the nonce value from HTML content."""
+    match = re.search(r"nonce\s*[:=]\s*['\"]([a-fA-F0-9]{10,})['\"]", html)
+    return match.group(1) if match else None
+
+def _resolve_final_link_with_selenium(initial_url: str) -> Optional[str]:
+    """
+    Uses a headless browser to navigate and intercept the final download URL.
+    This is the core of the download functionality.
+    """
+    driver = None
+    print("9anime-Module: Initializing headless browser...")
+    try:
+        options = webdriver.ChromeOptions()
+        options.add_argument("--headless=new")
+        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36")
+        options.add_argument("--window-size=1920,1080")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--log-level=3")
+        driver = webdriver.Chrome(options=options)
+
+        driver.set_page_load_timeout(8)
+
+        print(f"9anime-Module: Navigating to initial URL: {initial_url}")
+        try:
+            driver.get(initial_url)
+        except TimeoutException:
+            # This is expected and normal. The page is slow, but the navigation
+            # triggers the necessary browser events.
+            print("9anime-Module: Page load timed out as expected. Proceeding...")
+            pass
+        except WebDriverException as e:
+            print(f"9anime-Module: Error during initial navigation: {e}")
+            return None
+
+        driver.switch_to.new_window('tab')
+        driver.get("chrome://downloads")
+        
+        start_time = time.time()
+        timeout = 15 # 15-second timeout to find the link
+        get_url_script = "return document.querySelector('downloads-manager').shadowRoot.querySelector('#downloadsList downloads-item').shadowRoot.querySelector('a#url').href;"
+
+        print("9anime-Module: Resolving final download link...")
+        while time.time() - start_time < timeout:
+            try:
+                final_url = driver.execute_script(get_url_script)
+                if final_url and final_url != "about:blank":
+                    print("9anime-Module: Final link resolved successfully.")
+                    return final_url
+            except JavascriptException:
+                # This is also normal; the element doesn't exist until the download starts.
+                pass
+            time.sleep(0.25)
+        
+        print(f"9anime-Module: Timed out after {timeout} seconds waiting for download link.")
+        return None
+
+    except Exception as e:
+        print(f"9anime-Module: An unexpected error occurred in Selenium: {e}")
+        return None
+    finally:
+        if driver:
+            print("9anime-Module: Closing browser.")
+            driver.quit()
+
+# --- Main Module Functions ---
+
+async def get_iframe_source(mal_id: int, episode: int, dub: bool) -> Optional[str]:
+    """
+    Gets the streaming iframe source for an anime episode. (Async)
+    This function remains unchanged.
+    """
+    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
+        # This uses an async title fetcher
+        url = f"https://api.jikan.moe/v4/anime/{mal_id}"
+        try:
+            resp = await client.get(url, timeout=10)
+            resp.raise_for_status()
+            data = resp.json().get("data", {})
+            anime_title = data.get("title_english") or data.get("title")
+            if not anime_title: return None
+        except httpx.RequestError:
+            return None
+
+        slug = slugify_title_for_9anime(anime_title)
+        suffix = f"-dub-episode-{episode}" if dub else f"-episode-{episode}"
+        watch_url = f"{BASE_URL}/{slug}{suffix}"
+
+        try:
+            resp = await client.get(watch_url, timeout=15)
+            resp.raise_for_status()
+            soup = BeautifulSoup(resp.text, "html.parser")
+            embed_div = soup.find("div", id="embed_holder")
+            iframe = embed_div.find("iframe", src=True) if embed_div else None
+            return iframe["src"] if iframe else None
+        except (httpx.HTTPStatusError, Exception):
+            return None
+
+def get_download_link(mal_id: int, episode: int, dub: bool, quality: str) -> Optional[str]:
+    """
+    Fetches the direct download link for an anime episode. (Sync)
+    This function is now aligned with the working logic from test.py.
+    """
+    print(f"9anime-Module: Starting download process for MAL ID {mal_id}, Ep {episode}")
+    
+    # 1. Get Anime Title
+    anime_title = get_anime_title_sync(mal_id)
+    if not anime_title:
+        print("9anime-Module: Failed to get anime title.")
+        return None
+    
+    # 2. Get Nonce from the watch page
+    slug = f"{slugify_title_for_9anime(anime_title)}{'-dub' if dub else ''}-episode-{episode}"
+    watch_url = f"{BASE_URL}/watch/{slug}"
+    
+    try:
+        print(f"9anime-Module: Fetching nonce from {watch_url}")
+        resp_page = requests.get(watch_url, headers=HEADERS, timeout=10, allow_redirects=True)
+        resp_page.raise_for_status()
+        nonce = extract_nonce_from_html(resp_page.text)
+        if not nonce:
+            print("9anime-Module: Could not extract nonce from page.")
+            return None
+    except requests.exceptions.RequestException as e:
+        print(f"9anime-Module: Failed to fetch watch page: {e}")
+        return None
+
+    # 3. Fetch Initial Download Links from AJAX endpoint
+    ajax_url = f"{BASE_URL}/wp-admin/admin-ajax.php"
+    params = {"action": "fetch_download_links", "mal_id": mal_id, "ep": episode, "nonce": nonce}
+    
+    try:
+        print(f"9anime-Module: Fetching download list from AJAX endpoint...")
+        resp_ajax = requests.get(ajax_url, params=params, headers=HEADERS, timeout=10)
+        resp_ajax.raise_for_status()
+        data = resp_ajax.json()
+    except requests.exceptions.RequestException as e:
+        print(f"9anime-Module: Failed to fetch AJAX data: {e}")
+        return None
+    
+    # 4. Parse AJAX response and find the link for the desired quality
+    if data.get("data", {}).get("status") != 200:
+        print("9anime-Module: AJAX status was not successful.")
+        return None
+        
+    soup = BeautifulSoup(data["data"]["result"], "html.parser")
+    section_heading = soup.find("div", string=re.compile(r'\s*' + ("Dub" if dub else "Sub") + r'\s*'))
+    if not section_heading:
+        print("9anime-Module: Could not find Dub/Sub section.")
+        return None
+        
+    links_container = section_heading.find_next_sibling("div")
+    if not links_container:
+        print("9anime-Module: Could not find links container.")
+        return None
+        
+    quality_link_tag = links_container.find("a", string=lambda t: t and t.strip().lower() == quality.lower())
+    initial_url = quality_link_tag['href'] if quality_link_tag else None
+    
+    if not initial_url:
+        print(f"9anime-Module: Could not find link for quality '{quality}'.")
+        return None
+        
+    # 5. Resolve the final link using Selenium
+    return _resolve_final_link_with_selenium(initial_url)

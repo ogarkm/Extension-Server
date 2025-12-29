@@ -1,0 +1,444 @@
+#!/bin/bash
+
+#==============================================================================
+# Animex Extension Server Startup Script
+# Description: Professional startup script with comprehensive error handling,
+#              logging, and environment management for Animex Extension Server
+# Author: Animex Developer (Indie)
+# Date: 2023-10-01
+# License: GPL-3.0
+# Version: 1.0
+#==============================================================================
+
+set -euo pipefail  # Exit on error, undefined vars, pipe failures
+
+#==============================================================================
+# CONFIGURATION
+#==============================================================================
+
+readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+readonly VENV_DIR="${SCRIPT_DIR}/venv"
+readonly REQUIREMENTS="${SCRIPT_DIR}/requirements.txt"
+readonly FIRST_RUN_FLAG="${SCRIPT_DIR}/.first_run_complete"
+readonly LOGO_FILE="${SCRIPT_DIR}/logo.txt"
+readonly LOG_FILE="${SCRIPT_DIR}/startup.log"
+
+readonly APP_NAME="Animex Extension Server"
+readonly APP_HOST="${APP_HOST:-0.0.0.0}"
+readonly APP_PORT="${APP_PORT:-7275}"
+readonly PYTHON_CMD="${PYTHON_CMD:-python3}"
+
+#==============================================================================
+# UTILITY FUNCTIONS
+#==============================================================================
+
+# Logging function with timestamps
+log() {
+    local level="$1"
+    shift
+    local message="$*"
+    local timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+    echo "[$timestamp] [$level] $message" | tee -a "$LOG_FILE"
+}
+
+log_info() { log "INFO" "$@"; }
+log_warn() { log "WARN" "$@"; }
+log_error() { log "ERROR" "$@"; }
+
+# Display colored output
+print_colored() {
+    local color_code="$1"
+    local message="$2"
+    echo -e "\033[${color_code}m${message}\033[0m"
+}
+
+print_success() { print_colored "1;32" "$1"; }
+print_warning() { print_colored "1;33" "$1"; }
+print_error() { print_colored "1;31" "$1"; }
+print_info() { print_colored "1;36" "$1"; }
+print_orange() { print_colored "1;38;5;208" "$1"; }
+
+# Display Animex logo in bright orange
+display_logo() {
+    echo ""
+    if [[ -f "$LOGO_FILE" ]]; then
+        print_orange "$(cat "$LOGO_FILE")"
+        echo ""
+        print_orange "╔══════════════════════════════════════════════════════════════════════════╗"
+        print_orange "║                        ANIMEX EXTENSION SERVER                           ║"
+        print_orange "║                     Advanced Anime Streaming Platform                    ║"
+        print_orange "╚══════════════════════════════════════════════════════════════════════════╝"
+    else
+        print_orange "╔══════════════════════════════════════════════════════════════════════════╗"
+        print_orange "║                        ANIMEX EXTENSION SERVER                           ║"
+        print_orange "║                     Advanced Anime Streaming Platform                    ║"
+        print_orange "╚══════════════════════════════════════════════════════════════════════════╝"
+        log_warn "Logo file not found: $LOGO_FILE"
+    fi
+    echo ""
+}
+
+# Check system requirements
+check_requirements() {
+    log_info "Checking system requirements for Animex Extension Server..."
+    
+    if ! command -v "$PYTHON_CMD" &> /dev/null; then
+        log_error "Python 3 is not installed or not in PATH"
+        print_error "ERROR: $PYTHON_CMD command not found. Please install Python 3."
+        exit 1
+    fi
+    
+    local python_version
+    python_version=$("$PYTHON_CMD" --version 2>&1 | cut -d' ' -f2)
+    log_info "Found Python version: $python_version"
+    
+    if ! "$PYTHON_CMD" -m venv --help &> /dev/null; then
+        log_error "Python venv module is not available"
+        print_error "ERROR: Python venv module not found. Please install python3-venv."
+        exit 1
+    fi
+    
+    log_info "System requirements check passed for Animex Extension Server"
+}
+
+# Create and setup virtual environment
+setup_virtual_environment() {
+    log_info "Setting up Animex Extension Server virtual environment at: $VENV_DIR"
+    
+    if [[ ! -d "$VENV_DIR" ]]; then
+        print_info "🔧 Creating Animex virtual environment..."
+        if ! "$PYTHON_CMD" -m venv "$VENV_DIR"; then
+            log_error "Failed to create virtual environment"
+            print_error "ERROR: Failed to create virtual environment"
+            exit 1
+        fi
+        log_info "Animex virtual environment created successfully"
+        print_success "✓ Animex virtual environment created"
+    else
+        log_info "Animex virtual environment already exists"
+        print_info "🔧 Animex virtual environment already exists"
+    fi
+}
+
+# Activate virtual environment
+activate_virtual_environment() {
+    local activate_script="${VENV_DIR}/bin/activate"
+    
+    if [[ ! -f "$activate_script" ]]; then
+        log_error "Virtual environment activation script not found: $activate_script"
+        print_error "ERROR: Virtual environment is corrupted. Please delete the venv directory and try again."
+        exit 1
+    fi
+    
+    # shellcheck source=/dev/null
+    source "$activate_script"
+    log_info "Animex virtual environment activated"
+    print_success "✓ Animex virtual environment activated"
+}
+
+#==============================================================================
+# MODULE & EXTENSION REQUIREMENTS MANAGEMENT
+#==============================================================================
+
+# Extract requirements from .module files
+extract_module_requirements() {
+    local modules_dir="${SCRIPT_DIR}/modules"
+    local temp_req_file="$1"
+    
+    if [[ ! -d "$modules_dir" ]]; then
+        return 0
+    fi
+    
+    while IFS= read -r -d '' module_file; do
+        local json_header
+        json_header=$(sed -n '2,/^---$/p' "$module_file" | sed '$d' 2>/dev/null)
+        
+        if [[ -n "$json_header" ]]; then
+            local requirements
+            requirements=$("$PYTHON_CMD" -c "
+import json, sys
+try:
+    data = json.loads('''$json_header''')
+    reqs = data.get('requirements', [])
+    for req in reqs: print(req)
+except: pass
+" 2>/dev/null)
+            
+            if [[ -n "$requirements" ]]; then
+                echo "$requirements" >> "$temp_req_file"
+            fi
+        fi
+    done < <(find "$modules_dir" -name "*.module" -type f -print0)
+}
+
+# Extract requirements from extension package.json files
+extract_extension_requirements() {
+    local extensions_dir="${SCRIPT_DIR}/extensions"
+    local temp_req_file="$1"
+
+    if [[ ! -d "$extensions_dir" ]]; then
+        return 0
+    fi
+
+    while IFS= read -r -d '' pkg_file; do
+        local requirements
+        requirements=$("$PYTHON_CMD" -c "
+import json, sys
+try:
+    with open('$pkg_file', 'r') as f:
+        data = json.load(f)
+    reqs = data.get('requirements', [])
+    for req in reqs: print(req)
+except: pass
+" 2>/dev/null)
+
+        if [[ -n "$requirements" ]]; then
+            echo "$requirements" >> "$temp_req_file"
+        fi
+    done < <(find "$extensions_dir" -name "package.json" -type f -print0)
+}
+
+# Install Python dependencies with module and extension requirements
+install_dependencies() {
+    local temp_requirements="${SCRIPT_DIR}/.temp_all_requirements.txt"
+    
+    # Clear temp file
+    > "$temp_requirements"
+    
+    # Extract requirements from both modules and extensions
+    extract_module_requirements "$temp_requirements"
+    extract_extension_requirements "$temp_requirements"
+    
+    # Consolidate and count unique requirements
+    local final_reqs_count=0
+    if [[ -s "$temp_requirements" ]]; then
+        sort -u "$temp_requirements" -o "$temp_requirements"
+        final_reqs_count=$(wc -l < "$temp_requirements")
+    fi
+
+    # Backup original requirements.txt
+    local backup_requirements="${SCRIPT_DIR}/.requirements_backup.txt"
+    if [[ -f "$REQUIREMENTS" ]]; then
+        cp "$REQUIREMENTS" "$backup_requirements"
+    fi
+
+    # Merge all requirements
+    {
+        if [[ -f "$backup_requirements" ]]; then
+            cat "$backup_requirements"
+        fi
+        if [[ $final_reqs_count -gt 0 ]]; then
+            echo ""
+            echo "# Auto-generated module & extension requirements"
+            cat "$temp_requirements"
+        fi
+    } > "$REQUIREMENTS"
+
+    if [[ $final_reqs_count -gt 0 ]]; then
+        log_info "Merged $final_reqs_count unique requirements from modules/extensions."
+        print_success "✓ Found and added $final_reqs_count additional requirements."
+    fi
+
+    if [[ ! -f "$REQUIREMENTS" ]]; then
+        log_warn "Requirements file not found: $REQUIREMENTS"
+        print_warning "WARNING: requirements.txt not found. Server might not run correctly."
+        return 0
+    fi
+    
+    log_info "Installing/updating dependencies from: $REQUIREMENTS"
+    print_info "📦 Installing required packages..."
+    
+    # Upgrade pip first
+    pip install --upgrade pip >> "$LOG_FILE" 2>&1
+    
+    # Install all requirements
+    if ! pip install -r "$REQUIREMENTS" >> "$LOG_FILE" 2>&1; then
+        log_error "Failed to install dependencies. Check $LOG_FILE for details."
+        print_error "ERROR: Failed to install packages. Check log file."
+        # Restore original requirements before exiting
+        if [[ -f "$backup_requirements" ]]; then mv "$backup_requirements" "$REQUIREMENTS"; fi
+        rm -f "$temp_requirements"
+        deactivate 2>/dev/null || true
+        exit 1
+    fi
+    
+    # Restore original requirements.txt
+    if [[ -f "$backup_requirements" ]]; then
+        mv "$backup_requirements" "$REQUIREMENTS"
+    else
+        # If no backup, just clear the generated part
+        > "$REQUIREMENTS"
+    fi
+    rm -f "$temp_requirements"
+
+    log_info "Dependencies installed successfully"
+    print_success "✓ Dependencies installed"
+}
+
+# Perform first-time setup
+# ... (rest of the script remains the same)
+
+first_time_setup() {
+    print_orange "🚀 Performing Animex Extension Server first-time setup..."
+    log_info "Starting Animex Extension Server first-time setup"
+    
+    check_requirements
+    setup_virtual_environment
+    
+    touch "$FIRST_RUN_FLAG"
+    log_info "Animex Extension Server first-time setup completed"
+    print_success "✓ Animex Extension Server first-time setup completed"
+}
+
+# Start the Animex Extension Server
+start_application() {
+    log_info "Starting $APP_NAME on http://$APP_HOST:$APP_PORT"
+    print_orange "🎬 Starting Animex Extension Server..."
+    print_orange "🌐 Server URL: http://$APP_HOST:$APP_PORT"
+    print_orange "📺 Animex Extension Server is ready for anime streaming!"
+    print_info "Press CTRL+C to stop the Animex server"
+    echo ""
+    
+    # Check if uvicorn is available
+    if ! command -v uvicorn &> /dev/null; then
+        log_error "uvicorn not found in virtual environment"
+        print_error "ERROR: uvicorn is not installed. Please check your requirements.txt"
+        exit 1
+    fi
+    
+    # Check if live reload is enabled
+    if [[ "${LIVE_RELOAD:-false}" == "true" ]]; then
+        print_info "🔄 Live reload is enabled - server will restart on file changes"
+        # Start the server with file watching
+        python watch.py
+    else
+        # Start the server normally
+        uvicorn app:app --host "$APP_HOST" --port "$APP_PORT" --log-level info
+    fi
+}
+
+# Cleanup function
+# Cleanup function
+cleanup() {
+    local exit_code=$?
+    log_info "Shutting down Animex Extension Server (exit code: $exit_code)"
+    
+    # Clean up any remaining temporary requirement files
+    rm -f "${SCRIPT_DIR}/.temp_module_requirements.txt" "${SCRIPT_DIR}/.requirements_backup.txt"
+    
+    if [[ -n "${VIRTUAL_ENV:-}" ]]; then
+        deactivate 2>/dev/null || true
+        log_info "Animex virtual environment deactivated"
+        print_info "🔧 Animex virtual environment deactivated"
+    fi
+    
+    print_orange "🛑 Animex Extension Server stopped"
+    log_info "Animex Extension Server shutdown complete"
+    exit $exit_code
+}
+
+
+# Display help information
+show_help() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Animex Extension Server - Advanced Anime Streaming Platform
+
+OPTIONS:
+    -h, --help      Show this help message
+    --clean         Remove virtual environment and start fresh
+    --check         Check system requirements only
+    --live          Enable live reload - server will restart on file changes
+    --version       Show script version
+
+ENVIRONMENT VARIABLES:
+    APP_HOST        Server host (default: 0.0.0.0)
+    APP_PORT        Server port (default: 7275)
+    PYTHON_CMD      Python command (default: python3)
+
+EXAMPLES:
+    $0              Start Animex Extension Server
+    $0 --clean      Clean install Animex Extension Server
+    APP_PORT=8080 $0    Start Animex on port 8080
+
+ABOUT ANIMEX:
+    Animex Extension Server is an advanced anime streaming platform
+    designed to provide seamless anime content delivery and management.
+
+EOF
+}
+
+#==============================================================================
+# MAIN EXECUTION
+#==============================================================================
+
+main() {
+    # Parse command line arguments
+    while [[ $# -gt 0 ]]; do
+        case $1 in
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            --clean)
+                print_info "🧹 Cleaning Animex virtual environment..."
+                rm -rf "$VENV_DIR" "$FIRST_RUN_FLAG"
+                log_info "Clean install requested - removed Animex venv and first run flag"
+                ;;
+            --check)
+                check_requirements
+                print_success "✓ Animex system requirements check passed"
+                exit 0
+                ;;
+            --live)
+                export LIVE_RELOAD=true
+                print_info "🔄 Live reload enabled"
+                log_info "Live reload feature enabled"
+                ;;
+            --version)
+                echo "Animex Extension Server Startup Script v2.0"
+                exit 0
+                ;;
+            *)
+                print_error "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+        shift
+    done
+    
+    # Set up signal handlers
+    trap cleanup EXIT INT TERM
+    
+    # Initialize log file
+    echo "=== Animex Extension Server Startup - $(date) ===" >> "$LOG_FILE"
+    
+    # Display Animex logo
+    display_logo
+    
+    # Check if this is first run
+    if [[ ! -f "$FIRST_RUN_FLAG" ]]; then
+        first_time_setup
+    else
+        print_orange "🎉 Welcome back to Animex Extension Server!"
+        log_info "Returning Animex user detected"
+        check_requirements
+    fi
+    
+    # Activate virtual environment
+    activate_virtual_environment
+    
+    # Install/update dependencies
+    install_dependencies
+    
+    echo ""
+    
+    # Start the Animex Extension Server
+    start_application
+}
+
+# Execute main function with all arguments
+main "$@"
+

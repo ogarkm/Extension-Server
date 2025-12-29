@@ -1,0 +1,1233 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no"
+    />
+    <title>Anime - Media App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      :root {
+        --accent-color: #ff9500; /* Distinct Orange */
+        --background-color: #121212;
+        --background-color-secondary: #1e1e1e;
+        --text-primary: #ffffff;
+        --text-secondary: #aaaaaa;
+        --border-color: rgba(255, 255, 255, 0.15);
+        --shadow-medium: 0 10px 30px rgba(0, 0, 0, 0.5);
+        --shadow-heavy: 0 20px 50px rgba(0, 0, 0, 0.7);
+        --transition-smooth: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+      }
+
+      body {
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, sans-serif;
+        background-color: var(--background-color);
+        margin: 0;
+        color: var(--text-primary);
+        overflow-x: hidden;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      body.overlay-active {
+        overflow: hidden;
+      }
+
+      /* --- Liquid Glass Navbar --- */
+      .navbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        z-index: 1000;
+        padding: 20px 40px; /* More padding for desktop */
+        background: linear-gradient(
+          to bottom,
+          rgba(0, 0, 0, 0.8) 0%,
+          transparent 100%
+        );
+        backdrop-filter: blur(0px);
+        -webkit-backdrop-filter: blur(0px);
+        transition: background 0.4s ease-out, backdrop-filter 0.4s ease-out,
+          padding 0.4s ease;
+        box-sizing: border-box;
+      }
+
+      .navbar.scrolled {
+        background: rgba(18, 18, 18, 0.85);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding: 15px 40px; /* Compact on scroll */
+      }
+
+      .navbar svg {
+        display: block;
+        margin: 0; /* Aligned left for desktop usually, or keep centered if intended */
+        height: 40px;
+        width: auto;
+        opacity: 0.9;
+        transition: opacity 0.4s ease-out;
+      }
+
+      .navbar.scrolled svg {
+        opacity: 1;
+      }
+
+      /* --- Hero Section Cinematic Carousel --- */
+      #hero-section {
+        position: relative;
+        height: 65vh; /* Taller, cinematic height */
+        min-height: 600px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Center content vertically */
+        padding: 0 6%; /* Horizontal gutter */
+        box-sizing: border-box;
+        overflow: hidden;
+      }
+
+      .hero-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-size: cover;
+        background-position: center top;
+        transition: opacity 1.2s ease-in-out, transform 10s linear;
+        transform: scale(1);
+      }
+
+      /* Subtle zoom effect on active background */
+      #hero-section:hover .hero-background {
+        transform: scale(1.02);
+      }
+
+      .hero-background::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        /* Complex gradient: Darker on left for text readability, fading to bottom */
+        background: radial-gradient(
+            circle at 70% 20%,
+            transparent 0%,
+            var(--background-color) 120%
+          ),
+          linear-gradient(
+            to right,
+            var(--background-color) 0%,
+            rgba(18, 18, 18, 0.4) 50%,
+            transparent 100%
+          ),
+          linear-gradient(to top, var(--background-color) 0%, transparent 40%);
+      }
+
+      #hero-bg-1 {
+        opacity: 1;
+      }
+      #hero-bg-2 {
+        opacity: 0;
+      }
+
+      .hero-content {
+        position: relative;
+        z-index: 10;
+        text-align: left; /* Left align for desktop */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start; /* Left align items */
+        gap: 20px;
+        max-width: 50%; /* Restrict width so it doesn't span full screen */
+        opacity: 0;
+        transform: translateY(30px);
+        transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
+          transform 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+      }
+
+      .hero-content.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      /* --- Hero Logo --- */
+      .hero-logo {
+        max-width: 400px; /* Larger logo for desktop */
+        max-height: 200px;
+        width: 100%;
+        object-fit: contain;
+        object-position: left bottom;
+        margin-bottom: 10px;
+        filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
+      }
+
+      .hero-title {
+        font-size: 3.5rem; /* Larger font */
+        font-weight: 800;
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+        margin: 0;
+        line-height: 1.1;
+        display: none; /* Often hidden if Logo is present, remove this line if no logo */
+      }
+
+      .hero-subtitle {
+        font-size: 1rem; /* Slightly smaller for compactness */
+        font-weight: 700;
+        color: #e0e0e0;
+        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
+        max-width: 90%; /* Wider on mobile to fit text */
+        line-height: 1.4;
+        margin-bottom: 5px; /* Pull buttons closer to text */
+
+        /* Truncate text if it somehow gets too long */
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      /* Desktop Adjustment */
+      @media (min-width: 768px) {
+        .hero-subtitle {
+          font-size: 1.1rem;
+          max-width: 600px;
+          margin-bottom: 0;
+        }
+      }
+      .hero-buttons {
+        margin-top: 25px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+      }
+
+      .hero-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 14px 32px;
+        border-radius: 8px;
+        font-weight: 700;
+        text-decoration: none;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s var(--transition-smooth);
+        border: 1px solid transparent;
+      }
+
+      /* Play Button: High Contrast */
+      .hero-btn.play-btn {
+        background-color: #ff9500;
+        color: #fff;
+      }
+
+      .hero-btn.play-btn:hover {
+        transform: scale(1.05);
+        background-color: var(--accent-color);
+        color: #fff;
+        box-shadow: 0 0 30px rgba(255, 149, 0, 0.4);
+      }
+
+      /* Info Button: Glassmorphism */
+      .hero-btn.info-btn {
+        background-color: rgba(100, 100, 100, 0.4);
+        color: #ffffff;
+        backdrop-filter: blur(10px);
+      }
+
+      .hero-btn.info-btn:hover {
+        background-color: rgba(255, 255, 255, 0.2);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: scale(1.05);
+      }
+
+      /* --- Hero Dots Navigation --- */
+      .hero-dots {
+        position: absolute;
+        right: 6%; /* Right aligned for desktop usually */
+        bottom: 40px;
+        left: auto;
+        transform: none;
+        z-index: 10;
+        display: flex;
+        gap: 12px;
+      }
+
+      .hero-dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.3);
+        cursor: pointer;
+        transition: all 0.4s ease;
+      }
+
+      .hero-dot.active {
+        background-color: var(--accent-color);
+        transform: scale(1.3);
+        box-shadow: 0 0 10px var(--accent-color);
+      }
+
+      .hero-dot:hover {
+        background-color: rgba(255, 255, 255, 0.8);
+      }
+
+      /* --- Loader --- */
+      .loader {
+        border: 4px solid rgba(255, 255, 255, 0.1);
+        border-top: 4px solid var(--accent-color);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        animation: spin 0.8s linear infinite;
+        margin: 100px auto;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      /* --- Content Sections --- */
+      .content-section {
+        margin-bottom: 50px;
+        padding: 0 0 0 6%; /* Align with Hero gutter */
+        position: relative;
+        z-index: 5;
+      }
+
+      /* Pull the first section up slightly to overlap hero gradient */
+      .content-section:first-of-type {
+        margin-top: -60px;
+      }
+
+      .section-title {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: var(--text-primary);
+        margin-bottom: 25px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .section-title::before {
+        content: "";
+        display: block;
+        width: 4px;
+        height: 24px;
+        background-color: var(--accent-color);
+        border-radius: 2px;
+      }
+
+      .horizontal-scroll-container {
+        display: flex;
+        overflow-x: auto;
+        overflow-y: visible; /* Allow hover effects to pop out */
+        padding: 20px 0 40px 0; /* Padding for shadows */
+        gap: 20px;
+        scroll-behavior: smooth;
+        mask-image: linear-gradient(to right, black 95%, transparent 100%);
+        -webkit-mask-image: linear-gradient(
+          to right,
+          black 95%,
+          transparent 100%
+        );
+      }
+
+      /* Hide Scrollbar */
+      .horizontal-scroll-container::-webkit-scrollbar {
+        display: none;
+      }
+      .horizontal-scroll-container {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+      }
+
+      /* --- Poster Cards (Desktop Friendly) --- */
+      .poster-container {
+        flex-shrink: 0;
+        width: 220px; /* Wider for desktop */
+        position: relative;
+        transition: z-index 0.3s, transform 0.3s;
+      }
+
+      .poster-image-wrapper {
+        position: relative;
+        border-radius: 12px;
+        overflow: hidden;
+        aspect-ratio: 2/3; /* Standard Poster Ratio */
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        transition: transform 0.4s var(--transition-smooth),
+          box-shadow 0.4s var(--transition-smooth), border-color 0.3s;
+        border: 2px solid transparent; /* Prepare for border on hover */
+        background-color: #2a2a2a; /* Placeholder color */
+      }
+
+      .poster-image-wrapper img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        transition: filter 0.3s;
+      }
+
+      /* Hover Effects - The "Pop" */
+      .poster-container:hover {
+        z-index: 100; /* Bring to front */
+      }
+
+      .poster-container:hover .poster-image-wrapper {
+        transform: scale(1.1) translateY(-10px);
+        box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+        border-color: rgba(255, 255, 255, 0.2);
+      }
+
+      .poster-title {
+        margin-top: 15px;
+        font-size: 1rem;
+        font-weight: 600;
+        color: var(--text-secondary);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: center;
+        opacity: 0.8;
+        transition: color 0.3s, opacity 0.3s;
+        padding: 0 5px;
+      }
+
+      .poster-container:hover .poster-title {
+        color: var(--text-primary);
+        opacity: 1;
+      }
+
+      /* --- Progress Bar --- */
+      .progress-bar {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 4px;
+        background-color: rgba(255, 255, 255, 0.2);
+        z-index: 2;
+      }
+
+      .progress-bar-inner {
+        height: 100%;
+        background-color: var(--accent-color);
+        box-shadow: 0 0 10px var(--accent-color);
+      }
+
+      /* --- Episode Badge --- */
+      .episode-indicator {
+        position: absolute;
+        top: 10px;
+        right: 10px; /* Right side looks cleaner on posters */
+        left: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 700;
+        z-index: 2;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        letter-spacing: 0.5px;
+      }
+
+      /* --- Context/Info Button on Card --- */
+      .poster-info-btn {
+        position: absolute;
+        top: 10px;
+        left: 10px; /* Moved to left to balance Episode Badge */
+        right: auto;
+        z-index: 3;
+        background-color: rgba(30, 30, 30, 0.8);
+        color: #fff;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        opacity: 0; /* Hidden by default */
+        transform: translateY(-10px);
+        transition: all 0.3s ease;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+      }
+
+      .poster-container:hover .poster-info-btn {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .poster-info-btn:hover {
+        background-color: #fff;
+        color: #000;
+      }
+
+      /* --- Context Menu (Desktop Modal Style) --- */
+      .context-menu-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 2000;
+        background-color: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+        display: flex;
+        justify-content: center;
+        align-items: center; /* Center on screen for desktop */
+        opacity: 0;
+        visibility: hidden;
+        transition: opacity 0.3s ease, visibility 0.3s;
+      }
+
+      .context-menu-overlay.visible {
+        opacity: 1;
+        visibility: visible;
+      }
+
+      /* Transforms from bottom sheet to centered modal */
+      .context-menu {
+        width: 380px;
+        max-width: 90%;
+        background-color: #1e1e1e;
+        border-radius: 16px;
+        box-shadow: var(--shadow-heavy);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        transform: scale(0.95) translateY(20px);
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        overflow: hidden;
+        padding: 0;
+      }
+
+      .context-menu-overlay.visible .context-menu {
+        transform: scale(1) translateY(0);
+      }
+
+      .context-menu-group {
+        display: flex;
+        flex-direction: column;
+        padding: 8px;
+        background: transparent;
+        border-radius: 0;
+        margin: 0;
+      }
+
+      .context-menu-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        width: 100%;
+        padding: 14px 20px;
+        font-size: 1rem;
+        color: var(--text-primary);
+        background-color: transparent;
+        border: none;
+        text-align: left;
+        cursor: pointer;
+        border-radius: 8px;
+        transition: background-color 0.2s;
+        box-sizing: border-box;
+      }
+
+      .context-menu-item:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+      }
+
+      .context-menu-item i {
+        width: 24px;
+        text-align: center;
+        color: var(--text-secondary);
+        font-size: 1.1rem;
+      }
+
+      .context-menu-item:not(:last-child) {
+        border-bottom: none; /* Removed borders for cleaner look */
+      }
+
+      /* Cancel button logic for desktop modal */
+      .context-menu-item.context-menu-cancel {
+        margin-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.05);
+        justify-content: center;
+        color: var(--accent-color);
+        font-weight: 600;
+        border-radius: 0 0 16px 16px;
+      }
+      .context-menu-item.context-menu-cancel:hover {
+        background-color: rgba(255, 149, 0, 0.1);
+      }
+
+      .error-message {
+        color: #ff6b6b;
+        font-style: normal;
+        text-align: center;
+        margin-top: 20px;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div style="height: 40px; margin-left: 8px">
+        <svg
+          width="1304"
+          height="416"
+          viewBox="0 0 1304 416"
+          fill="none"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <g clip-path="url(#clip0_65_2)">
+            <mask
+              id="mask0_65_2"
+              style="mask-type: alpha"
+              maskUnits="userSpaceOnUse"
+              x="95"
+              y="62"
+              width="282"
+              height="295"
+            >
+              <rect x="95" y="62" width="282" height="37" fill="#DE541E" />
+              <rect x="95" y="124" width="282" height="37" fill="#DE541E" />
+              <path
+                d="M363 357H316.904L270 88H316.904L363 357Z"
+                fill="#DE541E"
+              />
+              <path
+                d="M114 357H160.096L207 88H160.096L114 357Z"
+                fill="#DE541E"
+              />
+              <rect
+                x="207"
+                y="297.857"
+                width="59"
+                height="59.1429"
+                fill="#DE541E"
+              />
+              <ellipse
+                cx="236.5"
+                cy="297.31"
+                rx="29.5"
+                ry="32.3095"
+                fill="#DE541E"
+              />
+            </mask>
+            <g mask="url(#mask0_65_2)">
+              <rect x="75" y="42" width="328" height="341" fill="#DE541E" />
+            </g>
+            <path
+              d="M400.023 357V227.625H448.07V251.648H449.008C452.211 242.898 457.094 236.258 463.656 231.727C470.219 227.117 478.383 224.812 488.148 224.812C502.367 224.812 513.305 229.109 520.961 237.703C528.695 246.297 532.562 258.367 532.562 273.914V357H484.516V284.461C484.516 277.977 482.992 272.859 479.945 269.109C476.898 265.359 472.367 263.484 466.352 263.484C462.602 263.484 459.359 264.383 456.625 266.18C453.891 267.977 451.781 270.438 450.297 273.562C448.812 276.688 448.07 280.281 448.07 284.344V357H400.023ZM550.023 357V227.625H598.07V357H550.023ZM574.047 216.023C567.328 216.023 561.664 213.758 557.055 209.227C552.523 204.695 550.258 199.344 550.258 193.172C550.258 186.922 552.523 181.57 557.055 177.117C561.664 172.586 567.328 170.32 574.047 170.32C580.766 170.32 586.391 172.586 590.922 177.117C595.531 181.57 597.836 186.922 597.836 193.172C597.836 199.344 595.531 204.695 590.922 209.227C586.391 213.758 580.766 216.023 574.047 216.023ZM616.117 357V227.625H664.164V252.117H665.102C667.445 243.758 671.898 237.117 678.461 232.195C685.102 227.273 692.914 224.812 701.898 224.812C708.148 224.812 713.695 225.945 718.539 228.211C723.461 230.398 727.484 233.602 730.609 237.82C733.812 242.039 735.922 247.195 736.938 253.289H737.875C739.359 247.586 741.977 242.625 745.727 238.406C749.477 234.109 754.086 230.789 759.555 228.445C765.023 226.023 771.039 224.812 777.602 224.812C786.039 224.812 793.422 226.688 799.75 230.438C806.156 234.188 811.156 239.422 814.75 246.141C818.344 252.781 820.141 260.516 820.141 269.344V357H772.094V281.883C772.094 277.742 771.508 274.344 770.336 271.688C769.164 268.953 767.406 266.922 765.062 265.594C762.797 264.188 759.906 263.484 756.391 263.484C753.188 263.484 750.414 264.227 748.07 265.711C745.727 267.195 743.93 269.305 742.68 272.039C741.508 274.695 740.922 277.938 740.922 281.766V357H695.336V282C695.336 277.859 694.75 274.422 693.578 271.688C692.406 268.953 690.648 266.922 688.305 265.594C686.039 264.188 683.188 263.484 679.75 263.484C676.547 263.484 673.773 264.227 671.43 265.711C669.086 267.195 667.289 269.305 666.039 272.039C664.789 274.773 664.164 278.016 664.164 281.766V357H616.117ZM902.055 359.812C888.07 359.812 876.039 357.117 865.961 351.727C855.883 346.336 848.109 338.602 842.641 328.523C837.25 318.367 834.555 306.297 834.555 292.312V292.195C834.555 278.133 837.25 266.102 842.641 256.102C848.031 246.023 855.648 238.289 865.492 232.898C875.414 227.508 887.094 224.812 900.531 224.812C913.969 224.812 925.609 227.469 935.453 232.781C945.375 238.094 953.031 245.594 958.422 255.281C963.891 264.969 966.625 276.375 966.625 289.5V303.094H857.992V275.906H944.359L922.211 301.453V282.938C922.211 277.703 921.352 273.211 919.633 269.461C917.992 265.711 915.648 262.859 912.602 260.906C909.555 258.875 905.961 257.859 901.82 257.859C897.68 257.859 894.086 258.875 891.039 260.906C887.992 262.859 885.609 265.711 883.891 269.461C882.25 273.211 881.43 277.703 881.43 282.938V301.688C881.43 306.922 882.289 311.414 884.008 315.164C885.727 318.914 888.188 321.805 891.391 323.836C894.594 325.789 898.461 326.766 902.992 326.766C907.211 326.766 910.727 326.102 913.539 324.773C916.352 323.367 918.539 321.766 920.102 319.969C921.742 318.172 922.758 316.648 923.148 315.398L923.266 315.047H966.039L965.688 316.57C964.75 320.789 962.992 325.398 960.414 330.398C957.836 335.32 954.125 340.047 949.281 344.578C944.438 349.031 938.148 352.703 930.414 355.594C922.758 358.406 913.305 359.812 902.055 359.812ZM972.367 357L1009.63 292.781L972.25 227.625H1026.62L1042.45 266.883H1043.38L1059.09 227.625H1110.77L1073.38 291.844L1110.77 357H1058.97L1040.45 316.336H1039.52L1021.7 357H972.367Z"
+              fill="#DE541E"
+            />
+          </g>
+          <defs>
+            <clipPath id="clip0_65_2">
+              <rect width="1304" height="416" fill="white" />
+            </clipPath>
+          </defs>
+        </svg>
+      </div>
+    </nav>
+    <div class="app-container">
+      <header id="hero-section">
+        <div class="loader"></div>
+      </header>
+
+      <main class="main-content" id="main-content-area"></main>
+    </div>
+
+    <script>
+      function loadLocalWatchHistory() {
+        try {
+          const history = localStorage.getItem("animex_watch_history");
+          localWatchHistory = history ? JSON.parse(history) : {};
+        } catch (e) {
+          localWatchHistory = {};
+        }
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        loadLocalWatchHistory();
+        // --- CONFIGURATION ---
+        const JIKAN_API_BASE_URL = "https://api.jikan.moe/v4";
+        const CONTENT_JSON_URL = "content.json";
+
+        // --- ELEMENT SELECTORS ---
+        const mainContentArea = document.getElementById("main-content-area");
+
+        // --- OVERLAY LOGIC ---
+        function openSeriesOverlay(
+          malId,
+          episodeToOpen = null,
+          skipApiWait = false
+        ) {
+          if (!malId) return;
+
+          let url = `series-info.html?id=${malId}`;
+          // Only add the watch-ep parameter if it's a valid number
+          if (episodeToOpen && !isNaN(episodeToOpen)) {
+            url += `&watch-ep=${episodeToOpen}`;
+            // Add skip-api flag if this is an ongoing episode (not finished)
+            if (skipApiWait) {
+              url += `&skip-api=true`;
+            }
+          }
+
+          if (window.parent && typeof window.parent.openPopup === "function") {
+            window.parent.openPopup(url);
+          } else {
+            window.location.href = url;
+          }
+        }
+
+        // --- LONG PRESS & CONTEXT MENU LOGIC ---
+        let longPressTimer;
+        let currentContextMenuTarget = null;
+
+        const contextMenuOverlay = document.createElement("div");
+        contextMenuOverlay.id = "context-menu-overlay";
+        contextMenuOverlay.className = "context-menu-overlay";
+        contextMenuOverlay.innerHTML = `
+          <div id="context-menu" class="context-menu">
+            <div class="context-menu-group">
+              <button class="context-menu-item" data-action="info">
+                <i class="fas fa-info-circle"></i>
+                <span>Series Info</span>
+              </button>
+              <button class="context-menu-item" data-action="mark-watched">
+                <i class="fas fa-check-circle"></i>
+                <span>Mark as Watched</span>
+              </button>
+            </div>
+            <div class="context-menu-group">
+              <button class="context-menu-item context-menu-cancel" data-action="cancel">
+                <span>Cancel</span>
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(contextMenuOverlay);
+        const contextMenu = document.getElementById("context-menu");
+
+        function showContextMenu(element) {
+          currentContextMenuTarget = element;
+          contextMenuOverlay.classList.add("visible");
+          document.body.classList.add("overlay-active");
+        }
+
+        function hideContextMenu() {
+          contextMenuOverlay.classList.remove("visible");
+          document.body.classList.remove("overlay-active");
+          currentContextMenuTarget = null;
+        }
+
+        function setupLongPress(element) {
+          let touchstartX = 0;
+          let touchstartY = 0;
+
+          const onTouchStart = (e) => {
+            touchstartX = e.touches[0].clientX;
+            touchstartY = e.touches[0].clientY;
+
+            longPressTimer = setTimeout(() => {
+              if (navigator.vibrate) {
+                navigator.vibrate(50);
+              }
+              showContextMenu(element);
+            }, 500);
+          };
+
+          const onTouchMove = (e) => {
+            const touchX = e.touches[0].clientX;
+            const touchY = e.touches[0].clientY;
+            if (
+              Math.abs(touchX - touchstartX) > 10 ||
+              Math.abs(touchY - touchstartY) > 10
+            ) {
+              clearTimeout(longPressTimer);
+            }
+          };
+
+          const onTouchEnd = () => {
+            clearTimeout(longPressTimer);
+          };
+
+          element.addEventListener("touchstart", onTouchStart, {
+            passive: true,
+          });
+          element.addEventListener("touchmove", onTouchMove, { passive: true });
+          element.addEventListener("touchend", onTouchEnd);
+          element.addEventListener("touchcancel", onTouchEnd);
+
+          // For desktop: right-click
+          element.addEventListener("contextmenu", (e) => {
+            e.preventDefault();
+            showContextMenu(element);
+          });
+        }
+
+        contextMenuOverlay.addEventListener("click", (e) => {
+          if (e.target === contextMenuOverlay) {
+            hideContextMenu();
+          }
+        });
+
+        contextMenu.addEventListener("click", (e) => {
+          const button = e.target.closest(".context-menu-item");
+          if (!button || !currentContextMenuTarget) return;
+
+          const action = button.dataset.action;
+          const malId = currentContextMenuTarget.dataset.malId;
+
+          hideContextMenu(); // Hide menu immediately on action
+
+          if (action === "info") {
+            if (malId) openSeriesOverlay(malId);
+          } else if (action === "mark-watched") {
+            // Placeholder for future implementation
+            window.parent.showToast(
+              `'Mark as Watched' for series ID ${malId} is not yet implemented.`
+            );
+            console.log(`Marking series ${malId} as watched...`);
+          }
+        });
+
+        // --- HERO CAROUSEL LOGIC ---
+        let heroData = [];
+        let heroCurrentIndex = 0;
+        let isBg1Active = true;
+        let bg1, bg2, heroContent, heroDotsContainer;
+        let heroAutoSwitchTimer;
+        let heroTouchStartX = 0;
+
+        function initializeHero(spotlightData) {
+          const container = document.getElementById("hero-section");
+          if (!spotlightData || spotlightData.length === 0) {
+            container.innerHTML = `<p class="error-message" style="text-align: center; padding: 50px 0;">Could not load featured content.</p>`;
+            return;
+          }
+
+          heroData = spotlightData;
+
+          container.innerHTML = `
+            <div id="hero-bg-1" class="hero-background"></div>
+            <div id="hero-bg-2" class="hero-background"></div>
+            <div class="hero-content"></div>
+            <div class="hero-dots"></div>
+          `;
+
+          bg1 = document.getElementById("hero-bg-1");
+          bg2 = document.getElementById("hero-bg-2");
+          heroContent = container.querySelector(".hero-content");
+          heroDotsContainer = container.querySelector(".hero-dots");
+
+          heroData.forEach((_, index) => {
+            const dot = document.createElement("span");
+            dot.classList.add("hero-dot");
+            dot.dataset.index = index;
+            dot.addEventListener("click", () => navigateToSlide(index));
+            heroDotsContainer.appendChild(dot);
+          });
+
+          container.addEventListener(
+            "touchstart",
+            (e) => (heroTouchStartX = e.touches[0].clientX),
+            { passive: true }
+          );
+          container.addEventListener("touchend", (e) => {
+            const swipeDist = e.changedTouches[0].clientX - heroTouchStartX;
+            if (swipeDist > 50) navigateHero(-1);
+            else if (swipeDist < -50) navigateHero(1);
+          });
+
+          updateHero(true);
+          startHeroTimer();
+        }
+
+        function startHeroTimer() {
+          clearInterval(heroAutoSwitchTimer);
+          heroAutoSwitchTimer = setInterval(() => navigateHero(1, false), 5000);
+        }
+
+        function navigateToSlide(index) {
+          heroCurrentIndex = index;
+          updateHero();
+          startHeroTimer();
+        }
+
+        function navigateHero(direction, isManual = true) {
+          heroCurrentIndex =
+            (heroCurrentIndex + direction + heroData.length) % heroData.length;
+          updateHero();
+          if (isManual) startHeroTimer();
+        }
+
+        function updateHero(isInitial = false) {
+          if (!heroData.length) return;
+          const currentAnime = heroData[heroCurrentIndex];
+
+          heroContent.classList.remove("visible");
+
+          const isMobile = window.innerWidth <= 768; // Define what "mobile" means
+          const imageUrl =
+            isMobile && currentAnime.image_tall
+              ? currentAnime.image_tall
+              : currentAnime.image;
+          if (isBg1Active) {
+            bg2.style.backgroundImage = `url(${imageUrl})`;
+            bg1.style.opacity = "0";
+            bg2.style.opacity = "1";
+          } else {
+            bg1.style.backgroundImage = `url(${imageUrl})`;
+            bg2.style.opacity = "0";
+            bg1.style.opacity = "1";
+          }
+          isBg1Active = !isBg1Active;
+
+          const dots = heroDotsContainer.querySelectorAll(".hero-dot");
+          dots.forEach((dot, index) => {
+            dot.classList.toggle("active", index === heroCurrentIndex);
+          });
+
+          setTimeout(
+            () => {
+              heroContent.innerHTML = `
+                <img src="${currentAnime.logo}" alt="${
+                currentAnime.name
+              } Logo" class="hero-logo">
+                <p class="hero-subtitle">${currentAnime.synopsis || ""}</p>
+                <div class="hero-buttons">
+                  <button class="hero-btn play-btn"><i class="fas fa-play"></i> Play</button>
+                  <button class="hero-btn info-btn"><i class="fas fa-info-circle"></i> Info</button>
+                </div>
+              `;
+              heroContent
+                .querySelector(".play-btn")
+                .addEventListener("click", () =>
+                  openSeriesOverlay(currentAnime.id, 1)
+                );
+              heroContent
+                .querySelector(".info-btn")
+                .addEventListener("click", () =>
+                  openSeriesOverlay(currentAnime.id)
+                );
+              heroContent.classList.add("visible");
+            },
+            isInitial ? 100 : 600
+          );
+        }
+
+        // --- CONTINUE WATCHING LOGIC (FIXED) ---
+        let continueWatchingList = []; // Store the processed list globally
+
+        async function initializeContinueWatching(watchHistory) {
+          if (!watchHistory || Object.keys(watchHistory).length === 0) {
+            return; // No history, so we do nothing.
+          }
+
+          const processedList = [];
+
+          // Iterate over each show ID in the history object
+          for (const showId in watchHistory) {
+            const showData = watchHistory[showId];
+            if (!showData) continue;
+
+            let lastWatchedTimestamp = null;
+            let lastWatchedEpisodeNumber = null;
+            let lastWatchedEpisodeData = null;
+
+            // Find the absolute most recently watched episode for this show
+            for (const episodeNumber in showData) {
+              const episodeData = showData[episodeNumber];
+              if (episodeData && episodeData.last_watched) {
+                const currentTimestamp = new Date(episodeData.last_watched);
+                if (
+                  !lastWatchedTimestamp ||
+                  currentTimestamp > lastWatchedTimestamp
+                ) {
+                  lastWatchedTimestamp = currentTimestamp;
+                  lastWatchedEpisodeNumber = parseInt(episodeNumber, 10);
+                  lastWatchedEpisodeData = episodeData;
+                }
+              }
+            }
+
+            // If we found a watched episode, add it to our list for sorting
+            if (lastWatchedTimestamp && lastWatchedEpisodeNumber) {
+              processedList.push({
+                show_id: showId,
+                last_watched_date: lastWatchedTimestamp,
+                last_watched_episode: lastWatchedEpisodeNumber,
+                episode_data: lastWatchedEpisodeData,
+              });
+            }
+          }
+
+          // Sort the entire list by the most recent timestamp, descending
+          processedList.sort(
+            (a, b) => b.last_watched_date - a.last_watched_date
+          );
+
+          continueWatchingList = processedList; // Store globally for updates
+
+          if (processedList.length > 0) {
+            await renderContinueWatchingSection(processedList);
+          }
+        }
+
+        function formatSeconds(seconds) {
+          if (!seconds || seconds < 0) return "0:00";
+          const mins = Math.floor(seconds / 60);
+          const secs = Math.floor(seconds % 60)
+            .toString()
+            .padStart(2, "0");
+          return `${mins}:${secs}`;
+        }
+
+        async function renderContinueWatchingSection(list) {
+          const section = document.createElement("section");
+          section.className = "content-section";
+          section.innerHTML = `<h2 class="section-title">Continue Watching</h2><div class="horizontal-scroll-container"></div>`;
+          mainContentArea.prepend(section); // Add this section to the top
+
+          const container = section.querySelector(
+            ".horizontal-scroll-container"
+          );
+
+          for (const item of list.slice(0, 15)) {
+            // Use the pre-calculated last watched episode number
+            const lastWatchedEp = item.last_watched_episode;
+            const episodeData = item.episode_data;
+            if (!lastWatchedEp || !episodeData) continue;
+
+            try {
+              // Add a small delay between Jikan API calls to avoid rate-limiting
+              await new Promise((resolve) => setTimeout(resolve, 350));
+              const response = await fetch(
+                `${JIKAN_API_BASE_URL}/anime/${item.show_id}`
+              );
+              if (!response.ok) continue;
+
+              const animeData = (await response.json()).data;
+              if (!animeData) continue;
+
+              const title = animeData.title_english || animeData.title;
+
+              // Calculate progress based on timestamp and episode_length from local storage
+              const timestamp = episodeData.timestamp || 0;
+              const episodeLength = episodeData.episode_length || 0;
+              const progressPercent =
+                episodeLength > 0 ? (timestamp / episodeLength) * 100 : 0;
+
+              // Determine indicator text and episode to open
+              const isFinished = episodeData.state === "finished";
+              const episodeToOpen = isFinished
+                ? lastWatchedEp + 1
+                : lastWatchedEp;
+              const indicatorText = isFinished
+                ? "END"
+                : formatSeconds(timestamp);
+
+              const posterContainer = document.createElement("div");
+              posterContainer.className = "poster-container";
+              posterContainer.dataset.malId = animeData.mal_id; // Set ID for context menu
+              posterContainer.innerHTML = `
+                <div class="poster-image-wrapper">
+                    <div class="episode-indicator">EP ${lastWatchedEp} • ${indicatorText}</div>
+                    <button class="poster-info-btn" title="Series Info"><i class="fas fa-info-circle"></i></button>
+                    <img src="${
+                      animeData.images?.jpg?.large_image_url ||
+                      animeData.images?.jpg?.image_url
+                    }" alt="${title}" loading="lazy">
+                    <div class="progress-bar">
+                        <div class="progress-bar-inner" style="width: ${progressPercent}%;"></div>
+                    </div>
+                </div>
+                <p class="poster-title" title="${title}">${title}</p>
+              `;
+              posterContainer.addEventListener("click", () =>
+                openSeriesOverlay(animeData.mal_id, episodeToOpen, true)
+              );
+              posterContainer
+                .querySelector(".poster-info-btn")
+                .addEventListener("click", (e) => {
+                  e.stopPropagation();
+                  openSeriesOverlay(animeData.mal_id);
+                });
+
+              setupLongPress(posterContainer);
+              container.appendChild(posterContainer);
+            } catch (err) {
+              console.error(
+                `Failed to fetch Jikan data for show ID ${item.show_id}:`,
+                err
+              );
+            }
+          }
+        }
+
+        // --- HORIZONTAL SECTION LOGIC (from content.json) ---
+        function createHorizontalSections(sections) {
+          if (!sections || sections.length === 0) return;
+
+          sections.forEach((sectionData) => {
+            const section = document.createElement("section");
+            section.className = "content-section";
+            section.innerHTML = `<h2 class="section-title">${sectionData.title}</h2>`;
+            const scrollContainer = document.createElement("div");
+            scrollContainer.className = "horizontal-scroll-container";
+            section.appendChild(scrollContainer);
+
+            if (!sectionData.items || sectionData.items.length === 0) {
+              scrollContainer.innerHTML = `<p class="error-message">No results found.</p>`;
+            } else {
+              sectionData.items.forEach((anime) => {
+                if (!anime?.id || !anime.image) return;
+
+                const posterContainer = document.createElement("div");
+                posterContainer.className = "poster-container";
+                posterContainer.dataset.malId = anime.id;
+                posterContainer.innerHTML = `
+                  <div class="poster-image-wrapper">
+                    <img src="${anime.image}" alt="${anime.name}" loading="lazy">
+                  </div>
+                  <p class="poster-title" title="${anime.name}">${anime.name}</p>
+                `;
+                posterContainer.addEventListener("click", () =>
+                  openSeriesOverlay(anime.id)
+                );
+                setupLongPress(posterContainer);
+                scrollContainer.appendChild(posterContainer);
+              });
+            }
+            mainContentArea.appendChild(section);
+          });
+        }
+
+        // --- AUTO-REFRESH CONTINUE WATCHING ---
+        async function refreshContinueWatchingSection() {
+          if (!continueWatchingList || continueWatchingList.length === 0)
+            return;
+
+          const section = document.querySelector(
+            ".content-section:has(.section-title:first-child)"
+          );
+          if (!section) return; // No continue watching section yet
+
+          const container = section.querySelector(
+            ".horizontal-scroll-container"
+          );
+          if (!container) return;
+
+          // Update each item's progress and indicator
+          const posterContainers =
+            container.querySelectorAll(".poster-container");
+
+          for (
+            let i = 0;
+            i < posterContainers.length && i < continueWatchingList.length;
+            i++
+          ) {
+            const item = continueWatchingList[i];
+            const posterContainer = posterContainers[i];
+
+            if (!posterContainer) continue;
+
+            // Get fresh data from localWatchHistory
+            const currentEpisodeData =
+              localWatchHistory[item.show_id]?.[item.last_watched_episode];
+            if (!currentEpisodeData) continue;
+
+            // Update progress bar
+            const timestamp = currentEpisodeData.timestamp || 0;
+            const episodeLength = currentEpisodeData.episode_length || 0;
+            const progressPercent =
+              episodeLength > 0 ? (timestamp / episodeLength) * 100 : 0;
+
+            const progressBarInner = posterContainer.querySelector(
+              ".progress-bar-inner"
+            );
+            if (progressBarInner) {
+              progressBarInner.style.width = progressPercent + "%";
+            }
+
+            // Update indicator text
+            const isFinished = currentEpisodeData.state === "finished";
+            const indicatorText = isFinished ? "END" : formatSeconds(timestamp);
+
+            const episodeIndicator =
+              posterContainer.querySelector(".episode-indicator");
+            if (episodeIndicator) {
+              episodeIndicator.textContent = `EP ${item.last_watched_episode} • ${indicatorText}`;
+            }
+          }
+        }
+
+        // --- PAGE INITIALIZATION ---
+        async function initializePage() {
+          try {
+            const contentResponse = await fetch(CONTENT_JSON_URL);
+            if (!contentResponse.ok)
+              throw new Error("Could not fetch content.json");
+            const contentData = await contentResponse.json();
+
+            initializeHero(contentData.spotlight);
+
+            // Use global localWatchHistory loaded by index.html
+            if (
+              window.localWatchHistory &&
+              Object.keys(window.localWatchHistory).length > 0
+            ) {
+              await initializeContinueWatching(window.localWatchHistory);
+            }
+
+            createHorizontalSections(contentData.sections);
+
+            // Start auto-refresh of continue watching section every second
+            setInterval(() => {
+              if (window.localWatchHistory) {
+                loadLocalWatchHistory(); // Refresh local watch history
+                refreshContinueWatchingSection();
+              }
+            }, 1000);
+          } catch (error) {
+            console.error("Failed to initialize the page:", error);
+            document.getElementById(
+              "hero-section"
+            ).innerHTML = `<p class="error-message" style="text-align: center; padding: 50px 0;">Error loading page content. Please try again later.</p>`;
+            mainContentArea.innerHTML = "";
+          }
+        }
+
+        initializePage();
+
+        // --- NAVBAR SCROLL EFFECT ---
+        const navbar = document.querySelector(".navbar");
+        window.addEventListener("scroll", () => {
+          if (window.scrollY > 50) {
+            navbar.classList.add("scrolled");
+          } else {
+            navbar.classList.remove("scrolled");
+          }
+        });
+      });
+    </script>
+  </body>
+</html>

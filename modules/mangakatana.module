@@ -1,0 +1,202 @@
+{
+    "name": "MangaKatana Reader",
+    "version": "1.2.0",
+    "author": "Animex",
+    "description": "Fetches manga chapters and page images from MangaKatana using the mangakatana library.",
+    "type": "MANGA_READER",
+    "requirements": ["mangakatana", "beautifulsoup4", "httpx"]
+}
+---
+import asyncio
+import httpx
+from bs4 import BeautifulSoup
+from typing import Optional, List, Dict, Any
+import re
+from urllib.parse import urlparse
+
+import mangakatana
+
+# --- Helper Functions ---
+
+async def get_manga_titles_from_mal(mal_id: int, client: httpx.AsyncClient) -> List[str]:
+    """Fetches a list of manga titles from Jikan API for robust searching."""
+    url = f"https://api.jikan.moe/v4/manga/{mal_id}"
+    try:
+        resp = await client.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json().get("data", {})
+        
+        titles = []
+        # Add the primary title first as it's most likely to be correct
+        if data.get("title"):
+            titles.append(data["title"])
+        
+        # Add English title if different
+        if data.get("title_english") and data["title_english"] not in titles:
+            titles.append(data["title_english"])
+            
+        # Add synonyms
+        for synonym in data.get("title_synonyms", []):
+            if synonym not in titles:
+                titles.append(synonym)
+        
+        if not titles:
+            print(f"MangaKatana-Module: No titles found for MAL ID {mal_id}")
+        
+        return titles
+        
+    except httpx.RequestError as e:
+        print(f"MangaKatana-Module: Jikan API request failed: {e}")
+        return []
+    except Exception as e:
+        print(f"MangaKatana-Module: An unexpected error occurred during Jikan API call: {e}")
+        return []
+
+
+async def scrape_images_from_url(url: str, client: httpx.AsyncClient) -> List[str]:
+    """
+    Fetches and scrapes image links from a chapter page using httpx.
+    """
+    try:
+        print(f"MangaKatana-Module: Navigating to {url}")
+        # Use headers to mimic a real browser visit, which can help avoid blocking
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+        }
+        response = await client.get(url, follow_redirects=True, headers=headers)
+        response.raise_for_status()
+
+        # Use regex to find the 'thzq' array in the script content. This is more reliable
+        # than parsing the entire HTML with BeautifulSoup for this specific task.
+        match = re.search(r'var thzq\s*=\s*\[(.*?)\];', response.text)
+        if not match:
+            print("MangaKatana-Module: Could not find 'thzq' variable in the page source.")
+            return []
+
+        # The matched group is a string of comma-separated, single-quoted URLs
+        image_urls_str = match.group(1)
+        
+        # Split the string by comma and remove the single quotes from each URL
+        image_links = [url.strip().strip("'") for url in image_urls_str.split(',') if url.strip()]
+
+        print(f"MangaKatana-Module: Found {len(image_links)} images.")
+        return image_links
+
+    except httpx.RequestError as e:
+        print(f"MangaKatana-Module: HTTP request failed: {e}")
+        return []
+    except Exception as e:
+        print(f"MangaKatana-Module: An unexpected error occurred during scraping: {e}")
+        return []
+
+# --- Main Module Functions ---
+
+def _sync_get_chapters(titles: List[str]) -> Optional[List[Dict[str, Any]]]:
+    """
+    Synchronous wrapper to search for manga across multiple titles and select the best match.
+    This runs in a separate thread to avoid blocking the async event loop.
+    """
+    for title in titles:
+        try:
+            print(f"MangaKatana-Module: Searching for '{title}' using the library...")
+            results = mangakatana.search(title=title)
+            if not results:
+                print(f"MangaKatana-Module: Library found no results for '{title}'.")
+                continue  # Try the next title
+
+            # --- SELECTION LOGIC ---
+            best_manga = None
+            min_len_diff = float('inf')
+            clean_search_title = re.sub(r'[^a-z0-9]', '', title.lower())
+
+            for manga in results:
+                clean_manga_title = re.sub(r'[^a-z0-9]', '', manga.title.lower())
+                if clean_search_title in clean_manga_title:
+                    len_diff = len(clean_manga_title) - len(clean_search_title)
+                    if len_diff < min_len_diff:
+                        min_len_diff = len_diff
+                        best_manga = manga
+            
+            if best_manga is None:
+                print(f"MangaKatana-Module: Could not find a confident match for '{title}'. Trying next title.")
+                continue
+
+            print(f"MangaKatana-Module: Selected '{best_manga.title}' as the best match for search term '{title}'.")
+            print(f"MangaKatana-Module: Fetching chapters for '{best_manga.title}'...")
+            
+            chapters_from_lib = best_manga.chapter_list()
+            
+            formatted_chapters = []
+            for ch in chapters_from_lib:
+                chapter_number = "Unknown"
+                try:
+                    url_parts = urlparse(ch.url)
+                    chapter_part = url_parts.path.strip('/').split('/')[-1]
+                    chapter_number = re.sub(r'^c', '', chapter_part)
+                except Exception as e:
+                    print(f"MangaKatana-Module: Failed to extract chapter number from URL '{ch.url}': {e}. Falling back to title.")
+                    num_search = re.search(r'(\d+(\.\d+)?)', ch.title)
+                    if num_search:
+                        chapter_number = num_search.group(1)
+                    else:
+                        print(f"MangaKatana-Module: Could not find chapter number in title '{ch.title}'.")
+                        chapter_number = ch.title
+
+                formatted_chapters.append({
+                    "title": ch.title,
+                    "url": ch.url,
+                    "chapter_number": str(chapter_number)
+                })
+            
+            # Reverse for ascending order and return successfully
+            return formatted_chapters[::-1]
+
+        except Exception as e:
+            print(f"MangaKatana-Module: The 'mangakatana' library failed for title '{title}': {e}")
+            continue  # Try the next title
+            
+    print(f"MangaKatana-Module: Failed to find chapters for any of the titles: {titles}")
+    return None
+
+async def get_chapters(mal_id: int) -> Optional[List[Dict[str, Any]]]:
+    """
+    Asynchronously gets a list of chapters for a given MyAnimeList ID by trying multiple titles.
+    """
+    async with httpx.AsyncClient() as client:
+        manga_titles = await get_manga_titles_from_mal(mal_id, client)
+        if not manga_titles:
+            return None
+    
+    loop = asyncio.get_running_loop()
+    chapter_list = await loop.run_in_executor(
+        None, _sync_get_chapters, manga_titles
+    )
+    
+    return chapter_list
+
+async def get_chapter_images(mal_id: int, chapter_num: str) -> Optional[List[str]]:
+    """
+    Asynchronously gets all page image URLs for a specific chapter number.
+    """
+    # First, get the list of all chapters to find the correct chapter URL
+    all_chapters = await get_chapters(mal_id)
+    if not all_chapters:
+        return None
+
+    target_chapter_url = None
+    for chapter in all_chapters:
+        # Check for an exact match on the chapter number string
+        if chapter.get("chapter_number") == str(chapter_num):
+            target_chapter_url = chapter.get("url")
+            print(f"MangaKatana-Module: Found URL for chapter {chapter_num}: {target_chapter_url}")
+            break
+            
+    if not target_chapter_url:
+        print(f"MangaKatana-Module: Could not find chapter {chapter_num} for MAL ID {mal_id}.")
+        return None
+
+    # Now run the scraper on the found URL to get the image links
+    async with httpx.AsyncClient() as client:
+        image_links = await scrape_images_from_url(target_chapter_url, client)
+    
+    return image_links

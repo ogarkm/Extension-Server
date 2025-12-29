@@ -1,0 +1,28 @@
+[
+    {
+        "id": "3e86258a-b4f7-48a2-8bed-3ae6d89f400b",
+        "name": "Arkm",
+        "avatar_url": "/data/avatars/3e86258a-b4f7-48a2-8bed-3ae6d89f400b.jpeg",
+        "settings": {
+            "theme": "dark",
+            "pushNotifications": false,
+            "downloadQuality": "1080p",
+            "nsfw_enabled": false,
+            "module_preferences": {}
+        },
+        "watch_history": {
+            "52299": {
+                "title": "Solo Leveling",
+                "episodes": {
+                    "5": {
+                        "watched_at": "2025-12-28T23:35:22Z",
+                        "season_number": 1,
+                        "state": "finished",
+                        "timestamp": 0
+                    }
+                },
+                "last_watched": "2025-12-28T23:35:22Z"
+            }
+        }
+    }
+]

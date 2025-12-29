@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Select Profile - Animex</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link rel="manifest" href="Resources/manifest.json/" />
+    <meta name="theme-color" content="#0b0b0b" />
+
+    <link rel="icon" href="/Resources/Images/icon-196.png" type="image/png" />
+    <!-- iOS support -->
+    <link rel="apple-touch-icon" href="/Resources/Images/icon-196.png" />
+    <style>
+      :root {
+        --background-primary: #121212;
+        --foreground-primary: #e6e6e6;
+        --foreground-secondary: #a0a0a0;
+        --background-modal: #252525;
+        --input-border-color: #3a3a3c;
+        --accent-primary: #ff9500;
+        --accent-primary-rgb: 255, 149, 0;
+        --destructive: #ff453a;
+        --radius-sm: 8px;
+        --radius-md: 16px;
+      }
+      body {
+        background-color: var(--background-primary);
+        color: var(--foreground-primary);
+        font-family: "Inter", sans-serif;
+        margin: 0;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+      }
+      .profile-container {
+        text-align: center;
+        animation: fadeIn 0.5s ease-in-out;
+      }
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      .profile-container h1 {
+        font-size: 3rem;
+        font-weight: 700;
+        margin-bottom: 2rem;
+      }
+      .profile-grid {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 2rem;
+        margin-bottom: 3rem;
+      }
+      .profile-item {
+        cursor: pointer;
+        text-align: center;
+        transition: transform 0.2s ease;
+        position: relative;
+      }
+      .profile-item:not(.add) img {
+        width: 150px;
+        height: 150px;
+        border-radius: var(--radius-md);
+        object-fit: cover;
+        margin-bottom: 1rem;
+        border: 4px solid transparent;
+        transition: all 0.2s ease;
+      }
+      .profile-item:not(.add):hover img {
+        transform: scale(1.05);
+        border-color: var(--accent-primary);
+      }
+      .profile-item .profile-name {
+        font-weight: 500;
+        font-size: 1.2rem;
+        color: var(--foreground-secondary);
+        transition: color 0.2s ease;
+      }
+      .profile-item:hover .profile-name {
+        color: var(--foreground-primary);
+      }
+      .profile-item.add .add-icon {
+        width: 150px;
+        height: 150px;
+        border-radius: var(--radius-md);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 3rem;
+        color: var(--foreground-secondary);
+        background-color: #2a2a2a;
+        transition: all 0.2s ease;
+        margin-bottom: 1rem;
+      }
+      .profile-item.add:hover .add-icon {
+        background-color: var(--accent-primary);
+        color: white;
+        transform: scale(1.05);
+      }
+      .manage-icon {
+        position: absolute;
+        top: 55px;
+        left: 55px;
+        width: 40px;
+        height: 40px;
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        border-radius: 50%;
+        display: none;
+        justify-content: center;
+        align-items: center;
+        font-size: 1.2rem;
+      }
+      .manage-mode .manage-icon {
+        display: flex;
+      }
+      .manage-mode .profile-item:hover img {
+        filter: brightness(0.7);
+      }
+      .manage-button {
+        background: none;
+        border: 1px solid var(--foreground-secondary);
+        color: var(--foreground-secondary);
+        padding: 0.75rem 2rem;
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      .manage-button:hover {
+        border-color: var(--foreground-primary);
+        color: var(--foreground-primary);
+        background-color: #2a2a2a;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-content {
+        background-color: var(--background-modal);
+        padding: 2rem;
+        border-radius: var(--radius-md);
+        width: 90%;
+        max-width: 400px;
+      }
+      .modal-content h2 {
+        margin-top: 0;
+        text-align: center;
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+      .form-group input {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: var(--background-primary);
+        border: 1px solid var(--input-border-color);
+        border-radius: var(--radius-sm);
+        color: var(--foreground-primary);
+        font-size: 1rem;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      .primary-button {
+        flex-grow: 1;
+        padding: 0.75rem;
+        border: none;
+        border-radius: var(--radius-sm);
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        background-color: var(--accent-primary);
+        color: white;
+      }
+      .secondary-button {
+        flex-grow: 1;
+        background-color: #3a3a3c;
+      }
+      .delete-button {
+        background-color: var(--destructive);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="profile-container" id="profileContainer">
+      <h1>Who's Watching?</h1>
+      <div class="profile-grid" id="profileGrid">
+        <!-- Profiles will be dynamically inserted here -->
+      </div>
+      <button class="manage-button" id="manageProfilesBtn">
+        Manage Profiles
+      </button>
+    </div>
+
+    <!-- MODAL for Profile Create/Edit -->
+    <div id="profileModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2 id="profileModalTitle">Create Profile</h2>
+        <form id="profileForm">
+          <div class="form-group">
+            <label for="profileNameInput">Name</label>
+            <input
+              type="text"
+              id="profileNameInput"
+              required
+              maxlength="20"
+              autocomplete="off"
+            />
+          </div>
+          <div class="modal-actions">
+            <button
+              type="button"
+              id="deleteProfileBtn"
+              class="primary-button delete-button"
+              style="display: none"
+            >
+              Delete
+            </button>
+            <button
+              type="button"
+              id="closeProfileModalBtn"
+              class="primary-button secondary-button"
+            >
+              Cancel
+            </button>
+            <button type="submit" id="saveProfileBtn" class="primary-button">
+              Save
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        const profileContainer = document.getElementById("profileContainer");
+        const profileGrid = document.getElementById("profileGrid");
+        const manageProfilesBtn = document.getElementById("manageProfilesBtn");
+        const profileModal = document.getElementById("profileModal");
+        const profileForm = document.getElementById("profileForm");
+        const profileModalTitle = document.getElementById("profileModalTitle");
+        const profileNameInput = document.getElementById("profileNameInput");
+        const closeProfileModalBtn = document.getElementById(
+          "closeProfileModalBtn"
+        );
+        const saveProfileBtn = document.getElementById("saveProfileBtn");
+        const deleteProfileBtn = document.getElementById("deleteProfileBtn");
+
+        let profiles = [];
+        let isManageMode = false;
+        let profileToEdit = null;
+
+        async function initialize() {
+          await fetchAndRenderProfiles();
+          setupEventListeners();
+        }
+
+        async function fetchAndRenderProfiles() {
+          try {
+            const response = await fetch("/profiles");
+            if (!response.ok) throw new Error("Could not fetch profiles");
+            profiles = await response.json();
+            renderProfileGrid();
+          } catch (error) {
+            console.error(error);
+            profileGrid.innerHTML =
+              "<p>Could not load profiles. Is the server running?</p>";
+          }
+        }
+
+        function renderProfileGrid() {
+          profileGrid.innerHTML = "";
+          profiles.forEach((profile) => {
+            const item = createProfileElement(profile);
+            profileGrid.appendChild(item);
+          });
+          // Add the "Add Profile" button if not at max capacity
+          if (profiles.length < 10) {
+            const addProfileItem = createAddProfileElement();
+            profileGrid.appendChild(addProfileItem);
+          }
+        }
+
+        function createProfileElement(profile) {
+          const item = document.createElement("div");
+          item.className = "profile-item";
+          item.innerHTML = `
+            <img src="${profile.avatar_url}" alt="${profile.name}">
+            <div class="manage-icon"><i class="fas fa-pencil-alt"></i></div>
+            <div class="profile-name">${profile.name}</div>
+          `;
+          item.addEventListener("click", () => handleProfileClick(profile));
+          return item;
+        }
+
+        function createAddProfileElement() {
+          const item = document.createElement("div");
+          item.className = "profile-item add";
+          item.innerHTML = `
+            <div class="add-icon"><i class="fas fa-plus"></i></div>
+            <div class="profile-name">Add Profile</div>
+          `;
+          item.addEventListener("click", () => {
+            profileToEdit = null; // Ensure it's a create operation
+            openProfileModal();
+          });
+          return item;
+        }
+
+        function handleProfileClick(profile) {
+          if (isManageMode) {
+            profileToEdit = profile;
+            openProfileModal(profile);
+          } else {
+            loginWithProfile(profile);
+          }
+        }
+
+        function loginWithProfile(profile) {
+          localStorage.setItem("currentProfileId", profile.id);
+          // Redirect to the main app page or settings page
+          console.log(`Logged in as ${profile.name}`);
+          window.location.href = "index.html";
+        }
+
+        function toggleManageMode() {
+          isManageMode = !isManageMode;
+          profileContainer.classList.toggle("manage-mode", isManageMode);
+          manageProfilesBtn.textContent = isManageMode
+            ? "Done"
+            : "Manage Profiles";
+        }
+
+        function openProfileModal(profile = null) {
+          profileForm.reset();
+          if (profile) {
+            profileModalTitle.textContent = "Edit Profile";
+            profileNameInput.value = profile.name;
+            deleteProfileBtn.style.display = "block";
+          } else {
+            profileModalTitle.textContent = "Create Profile";
+            deleteProfileBtn.style.display = "none";
+          }
+          profileModal.style.display = "flex";
+          profileNameInput.focus();
+        }
+
+        function closeProfileModal() {
+          profileModal.style.display = "none";
+        }
+
+        async function handleFormSubmit(e) {
+          e.preventDefault();
+          const name = profileNameInput.value.trim();
+          if (!name) return;
+
+          saveProfileBtn.disabled = true;
+
+          try {
+            if (profileToEdit) {
+              // Edit existing profile - change PATCH to PUT
+              const response = await fetch(`/profiles/${profileToEdit.id}`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  id: profileToEdit.id,
+                  name: name,
+                  avatar_url: profileToEdit.avatar_url,
+                  settings: profileToEdit.settings,
+                }),
+              });
+              if (!response.ok) throw new Error("Failed to update profile");
+            } else {
+              // Create new profile
+              const response = await fetch("/profiles", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name }),
+              });
+              if (!response.ok) throw new Error("Failed to create profile");
+            }
+            closeProfileModal();
+            await fetchAndRenderProfiles();
+          } catch (error) {
+            console.error(error);
+            window.parent.showToast("An error occurred. Please try again.");
+          } finally {
+            saveProfileBtn.disabled = false;
+          }
+        }
+
+        async function handleDeleteProfile() {
+          if (
+            !profileToEdit ||
+            !confirm(`Delete profile "${profileToEdit.name}"?`)
+          ) {
+            return;
+          }
+          try {
+            const response = await fetch(`/profiles/${profileToEdit.id}`, {
+              method: "DELETE",
+            });
+            if (!response.ok) throw new Error("Failed to delete profile");
+            closeProfileModal();
+            await fetchAndRenderProfiles();
+          } catch (error) {
+            console.error(error);
+            window.parent.showToast("Could not delete profile.");
+          }
+        }
+
+        function setupEventListeners() {
+          manageProfilesBtn.addEventListener("click", toggleManageMode);
+          profileForm.addEventListener("submit", handleFormSubmit);
+          closeProfileModalBtn.addEventListener("click", closeProfileModal);
+          deleteProfileBtn.addEventListener("click", handleDeleteProfile);
+        }
+
+        initialize();
+      });
+    </script>
+  </body>
+</html>

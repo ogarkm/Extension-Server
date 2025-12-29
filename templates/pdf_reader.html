@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>PDF Reader</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+    <style>
+        :root {
+            --background-color: #121212;
+            --text-color: #EAEAEA;
+            --accent-color: #FF9500;
+            --header-bg: rgba(20, 20, 22, 0.85);
+            --border-color: rgba(255, 255, 255, 0.1);
+        }
+        body {
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-y: scroll;
+        }
+        #reader-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            background-color: var(--header-bg);
+            backdrop-filter: blur(14px);
+            -webkit-backdrop-filter: blur(14px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 55px;
+            padding: 0 20px;
+        }
+        #pdf-title {
+            font-size: 17px;
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        #page-indicator {
+            font-size: 14px;
+            color: #ccc;
+        }
+        #loader {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border: 4px solid #444;
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+        #pdf-container {
+            padding-top: 70px; /* Space for header */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+        #pdf-container canvas {
+            max-width: 100%;
+            height: auto;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+        }
+    </style>
+</head>
+<body>
+    <header id="reader-header">
+        <h1 id="pdf-title">Loading PDF...</h1>
+        <div id="page-indicator">Page 1 / ?</div>
+    </header>
+
+    <div id="loader"></div>
+    <main id="pdf-container"></main>
+
+    <script>
+        // Set worker source for PDF.js
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js`;
+
+        const container = document.getElementById('pdf-container');
+        const loader = document.getElementById('loader');
+        const titleEl = document.getElementById('pdf-title');
+        const pageIndicator = document.getElementById('page-indicator');
+        
+        let pdfDoc = null;
+        let currentPage = 1;
+        let totalPages = 0;
+
+        // --- IndexedDB Functions ---
+        const DB_NAME = 'PDFLibraryDB';
+        const DB_VERSION = 1;
+        const STORE_NAME = 'pdfs';
+
+        function openDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open(DB_NAME, DB_VERSION);
+                request.onerror = (e) => reject("Error opening DB: " + e.target.errorCode);
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onupgradeneeded = (e) => {
+                    if (!e.target.result.objectStoreNames.contains(STORE_NAME)) {
+                        e.target.result.createObjectStore(STORE_NAME, { keyPath: 'id', autoIncrement: true });
+                    }
+                };
+            });
+        }
+
+        async function getPdfFromDB(id) {
+            const db = await openDB();
+            const transaction = db.transaction(STORE_NAME, 'readonly');
+            const store = transaction.objectStore(STORE_NAME);
+            return new Promise((resolve, reject) => {
+                const request = store.get(Number(id));
+                request.onsuccess = (e) => resolve(e.target.result);
+                request.onerror = (e) => reject("Error fetching PDF: " + e.target.errorCode);
+            });
+        }
+
+        async function renderPdf(pdfData) {
+            const loadingTask = pdfjsLib.getDocument({ data: pdfData });
+            pdfDoc = await loadingTask.promise;
+            totalPages = pdfDoc.numPages;
+            loader.style.display = 'none';
+            pageIndicator.textContent = `Page 1 / ${totalPages}`;
+            
+            for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+                const page = await pdfDoc.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 2.0 });
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.height = viewport.height;
+                canvas.width = viewport.width;
+                
+                container.appendChild(canvas);
+
+                await page.render({ canvasContext: context, viewport: viewport }).promise;
+            }
+        }
+
+        function updatePageIndicator() {
+            let mostVisiblePage = 1;
+            const canvases = container.getElementsByTagName('canvas');
+            let maxVisibility = 0;
+
+            for (let i = 0; i < canvases.length; i++) {
+                const rect = canvases[i].getBoundingClientRect();
+                const visibleHeight = Math.max(0, Math.min(rect.bottom, window.innerHeight) - Math.max(rect.top, 0));
+                const visibility = visibleHeight / rect.height;
+
+                if (visibility > maxVisibility) {
+                    maxVisibility = visibility;
+                    mostVisiblePage = i + 1;
+                }
+            }
+            pageIndicator.textContent = `Page ${mostVisiblePage} / ${totalPages}`;
+        }
+
+        async function init() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const pdfId = urlParams.get('id');
+
+            if (!pdfId) {
+                titleEl.textContent = "No PDF specified.";
+                loader.style.display = 'none';
+                return;
+            }
+
+            try {
+                const pdfRecord = await getPdfFromDB(pdfId);
+                if (pdfRecord && pdfRecord.file) {
+                    titleEl.textContent = pdfRecord.name;
+                    const pdfBytes = await pdfRecord.file.arrayBuffer();
+                    await renderPdf(pdfBytes);
+                    window.addEventListener('scroll', updatePageIndicator);
+                } else {
+                    throw new Error("PDF not found in offline library.");
+                }
+            } catch (error) {
+                console.error("Failed to load PDF:", error);
+                titleEl.textContent = "Error loading PDF";
+                loader.style.display = 'none';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

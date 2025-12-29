@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Downloading Manga...</title>
+    <style>
+        :root {
+            --background-color: #121212;
+            --text-color: #EAEAEA;
+            --accent-color: #FF9500;
+            --spinner-track-color: #444;
+        }
+        body {
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        #spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid var(--spinner-track-color);
+            border-top-color: var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin: 0;
+        }
+        p {
+            font-size: 16px;
+            color: #aaa;
+            margin: 0;
+        }
+        #status-text {
+            margin-top: 10px;
+        }
+        #error-message {
+            color: #ff4545;
+            display: none;
+            margin-top: 1rem;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <div id="spinner"></div>
+        <div id="status-text">
+            <h1 id="title-text">Grabbing Chapter for you...</h1>
+            <p id="details-text">Your download will begin shortly.</p>
+            <p id="error-message"></p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const pathParts = window.location.pathname.split('/');
+            const source = pathParts[3];
+            const mangaId = pathParts[4];
+            const chapterId = pathParts[5];
+
+            const titleText = document.getElementById('title-text');
+            const detailsText = document.getElementById('details-text');
+            const errorMessage = document.getElementById('error-message');
+            const spinner = document.getElementById('spinner');
+
+            // --- Update Title ---
+            if (source === 'jikan') {
+                fetch(`https://api.jikan.moe/v4/manga/${mangaId}`)
+                    .then(res => res.json())
+                    .then(data => {
+                        const title = data.data?.title || 'this manga';
+                        titleText.textContent = `Grabbing Chapter ${chapterId} of ${title}`;
+                    })
+                    .catch(err => console.error("Failed to fetch manga title:", err));
+            } else if (source === 'mangadex') {
+                 const mangaDetailsPromise = fetch(`/mangadex/manga/${mangaId}`).then(res => res.json());
+                 const chapterDetailsPromise = fetch(`/mangadex/manga/${mangaId}/chapter-nav-details/${chapterId}`).then(res => res.json());
+
+                 Promise.all([mangaDetailsPromise, chapterDetailsPromise])
+                    .then(([mangaData, chapterNavData]) => {
+                        const title = mangaData?.attributes?.title?.en || 'this manga';
+                        const chapterNumber = chapterNavData?.current_chapter?.attributes?.chapter || chapterId;
+                        titleText.textContent = `Grabbing Chapter ${chapterNumber} of ${title}`;
+                    })
+                    .catch(err => {
+                        console.error("Failed to fetch manga/chapter title:", err);
+                        titleText.textContent = `Grabbing Chapter for you...`;
+                    });
+            }
+
+            // --- Trigger Download ---
+            const downloadUrl = `/download-manga/direct/${source}/${mangaId}/${chapterId}`;
+            
+            fetch(downloadUrl)
+                .then(async res => {
+                    if (!res.ok) {
+                        const errorData = await res.json().catch(() => null);
+                        const detail = errorData?.detail || `Server responded with status ${res.status}`;
+                        throw new Error(detail);
+                    }
+                    const disposition = res.headers.get('content-disposition');
+                    let filename = `chapter-${chapterId}.pdf`;
+                    if (disposition && disposition.includes('attachment')) {
+                        const filenameMatch = /filename="([^"]+)"/.exec(disposition);
+                        if (filenameMatch && filenameMatch[1]) {
+                            filename = filenameMatch[1];
+                        }
+                    }
+                    return res.blob().then(blob => ({ blob, filename }));
+                })
+                .then(({ blob, filename }) => {
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    a.remove();
+
+                    spinner.style.display = 'none';
+                    detailsText.textContent = "Download started! You can close this page.";
+                })
+                .catch(err => {
+                    console.error('Download failed:', err);
+                    spinner.style.display = 'none';
+                    titleText.textContent = 'Download Failed';
+                    detailsText.textContent = 'Could not prepare your download.';
+                    errorMessage.textContent = `Error: ${err.message}. Please try again later.`;
+                    errorMessage.style.display = 'block';
+                });
+        });
+    </script>
+</body>
+</html>

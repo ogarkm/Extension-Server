@@ -1,0 +1,16 @@
+fastapi
+uvicorn[standard]
+requests
+beautifulsoup4
+httpx
+zeroconf
+selenium
+fpdf2
+python-multipart
+mangakatana
+hmtai
+# Auto-generated module & extension requirements
+beautifulsoup4
+httpx
+jinja2
+watchdog
