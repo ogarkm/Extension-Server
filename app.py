@@ -239,7 +239,7 @@ def load_extensions(app: FastAPI):
             if "port" in ext_meta and "start_command" in ext_meta:
                 ext_port = ext_meta["port"]
                 ext_start_command = ext_meta["start_command"]
-                ext_server_url = f"http://127.0.0.1:{ext_port}"
+                ext_server_url = f"https://127.0.0.1:{ext_port}"
 
                 print(f"Starting extension '{ext_name}' server in the background.")
                 

@@ -276,7 +276,7 @@
         // At the top of the script, with the other global variables
         let currentProfile = null;
 
-        const serverUrl = `http://${serverIp}:7275`;
+        const serverUrl = `https://${serverIp}`;
         let localWatchHistory = {};
         // All watch history is now local only. Removed userWatchHistory and isSyncing.
         const backButton = document.getElementById("back-button");
@@ -1358,7 +1358,7 @@
               window.parent.showToast("Server IP not configured.");
               return;
             }
-            const serverUrl = `http://${serverIp}:7275`;
+            const serverUrl = `https://${serverIp}`;
             const exportUrl = `${serverUrl}/export/series/${currentMalId}?type=${type}`;
 
             window.open(exportUrl, "_blank");

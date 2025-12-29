@@ -292,9 +292,9 @@ first_time_setup() {
 
 # Start the Animex Extension Server
 start_application() {
-    log_info "Starting $APP_NAME on http://$APP_HOST:$APP_PORT"
+    log_info "Starting $APP_NAME on https://$APP_HOST:$APP_PORT"
     print_orange "🎬 Starting Animex Extension Server..."
-    print_orange "🌐 Server URL: http://$APP_HOST:$APP_PORT"
+    print_orange "🌐 Server URL: https://$APP_HOST:$APP_PORT"
     print_orange "📺 Animex Extension Server is ready for anime streaming!"
     print_info "Press CTRL+C to stop the Animex server"
     echo ""

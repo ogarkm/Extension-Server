@@ -615,11 +615,11 @@
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
-        const serverUrl = `http://${localStorage.getItem("extension_server_ip") || "localhost"}:7275`;
+        const serverUrl = `https://${localStorage.getItem("extension_server_ip") || "localhost"}`;
         const JIKAN_API_BASE_URL = "https://api.jikan.moe/v4";
 
         const urlParams = new URLSearchParams(window.location.search);
-        const profileId = urlParams.get('profileId') || localStorage.getItem("currentProfileId");
+        const profileId = urlParams.get('profileId');
 
         // --- SOURCE MANAGEMENT ---
         const mainHeading = document.getElementById("main-heading");

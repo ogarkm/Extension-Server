@@ -349,7 +349,7 @@
             let currentGenre = { id: null, name: null };
             let allSearchResults = [];
             let searchTimeout;
-            const serverUrl = `http://${localStorage.getItem("extension_server_ip") || "localhost"}:7275`;
+            const serverUrl = `https://${localStorage.getItem("extension_server_ip") || "localhost"}`;
 
             // --- View Management ---
             function updateToggleIndicator() {

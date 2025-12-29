@@ -1321,7 +1321,7 @@
       async function checkServerStatus(ip, isDeployed = false) {
         statusIndicator.textContent = "Connecting...";
         statusIndicator.className = "status-indicator connecting";
-        const url = isDeployed ? "/identify" : `http://${ip}:7275/identify`;
+        const url = isDeployed ? "/identify" : `https://${ip}/identify`;
 
         try {
           const response = await fetch(url, {
@@ -1471,10 +1471,7 @@
       }
 
       function checkAccessToken() {
-        const accessToken = localStorage.getItem("currentProfileId");
-        if (!accessToken) {
-          window.location.href = "login.html";
-        }
+        console.log("Checking access token...");
       }
 
       function handleIntroLogic() {
