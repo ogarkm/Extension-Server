@@ -1532,10 +1532,6 @@
           <span class="nav-icon"><i class="fas fa-bookmark"></i></span>
           <span class="nav-text">LIBRARY</span>
         </a>
-        <a href="#" class="nav-item" data-src="settings.html">
-          <span class="nav-icon"><i class="fas fa-cog"></i></span>
-          <span class="nav-text">SETTINGS</span>
-        </a>
       </nav>
     </div>
 
@@ -2132,9 +2128,7 @@
 
       function checkAccessToken() {
         const accessToken = localStorage.getItem("currentProfileId");
-        if (!accessToken) {
-          window.location.href = "login.html";
-        }
+        localStorage.setItem("currentProfileId", "");
       }
 
       function handleIntroLogic() {
