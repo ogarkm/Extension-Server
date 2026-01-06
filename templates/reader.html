@@ -16,8 +16,9 @@
         --background-color: #121212;
         --text-color: #eaeaea;
         --accent-color: #ff9500;
-        --header-bg: rgba(20, 20, 22, 0.7);
-        --footer-bg: rgba(20, 20, 22, 0.85);
+        --accent-hover: #ffaa33;
+        --header-bg: rgba(18, 18, 18, 0.85);
+        --footer-bg: rgba(18, 18, 18, 0.9);
         --border-color: rgba(255, 255, 255, 0.1);
       }
       body {
@@ -28,6 +29,24 @@
           Helvetica, Arial, sans-serif;
         overflow: hidden;
       }
+
+      /* Scrollbar Styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+        height: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #1a1a1a;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #444;
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #666;
+      }
+
+      /* Header */
       #reader-header {
         position: fixed;
         top: 0;
@@ -35,19 +54,21 @@
         right: 0;
         z-index: 100;
         background-color: var(--header-bg);
-        backdrop-filter: blur(14px) saturate(180%);
-        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border-bottom: 1px solid var(--border-color);
         display: flex;
         justify-content: space-between;
         align-items: center;
-        height: 55px;
-        padding: 0 10px 0 15px;
+        height: 60px;
+        padding: 0 20px;
         transition: transform 0.3s ease-in-out;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
       }
       #reader-header.hidden {
         transform: translateY(-100%);
       }
+
       .header-left,
       .header-center,
       .header-right {
@@ -55,59 +76,91 @@
         align-items: center;
         gap: 15px;
       }
+      
       .header-center {
-        text-align: left; /* Changed from center */
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: center;
+        max-width: 40vw;
       }
+      
       .header-center h1 {
-        font-size: 17px;
+        font-size: 16px;
         margin: 0;
         font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        width: 100%;
       }
       .header-center p {
-        font-size: 13px;
-        margin: 0;
+        font-size: 12px;
+        margin: 2px 0 0 0;
         color: #aaa;
+      }
+
+      /* Controls */
+      button {
+        transition: all 0.2s ease;
       }
       #back-btn {
         background: none;
         border: none;
         color: var(--text-color);
-        font-size: 24px;
+        font-size: 20px;
         cursor: pointer;
-        padding: 0 10px 0 0;
+        padding: 8px;
+        border-radius: 50%;
       }
+      #back-btn:hover {
+        background: rgba(255,255,255,0.1);
+      }
+
       #next-chapter-btn {
         background: var(--accent-color);
         color: white;
         border: none;
-        padding: 8px 14px;
-        border-radius: 8px;
+        padding: 8px 16px;
+        border-radius: 6px;
         font-weight: 600;
-        font-size: 14px;
+        font-size: 13px;
         cursor: pointer;
-        display: none; /* Hidden by default */
+        display: none;
+        box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
       }
+      #next-chapter-btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+      }
+
       .mode-switcher {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.08);
         border-radius: 8px;
         padding: 4px;
         display: flex;
+        border: 1px solid rgba(255,255,255,0.05);
       }
       .mode-switcher button {
         background: transparent;
         border: none;
-        color: #ccc;
-        padding: 5px 10px;
+        color: #bbb;
+        padding: 6px 12px;
         border-radius: 6px;
         cursor: pointer;
-        font-size: 14px;
-        transition: background 0.2s;
+        font-size: 13px;
+        font-weight: 500;
+      }
+      .mode-switcher button:hover {
+        color: #fff;
       }
       .mode-switcher button.active {
-        background: var(--accent-color);
+        background: rgba(255,255,255,0.15);
         color: white;
         font-weight: 600;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.2);
       }
+
+      /* Loader */
       #loader {
         position: fixed;
         top: 50%;
@@ -115,22 +168,25 @@
         transform: translate(-50%, -50%);
         width: 40px;
         height: 40px;
-        border: 4px solid #444;
+        border: 4px solid #333;
         border-top-color: var(--accent-color);
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        animation: spin 0.8s linear infinite;
+        z-index: 50;
       }
       @keyframes spin {
-        to {
-          transform: translate(-50%, -50%) rotate(360deg);
-        }
+        to { transform: translate(-50%, -50%) rotate(360deg); }
       }
+
+      /* Main Viewer */
       #image-container {
         height: 100vh;
         width: 100vw;
         overflow: hidden;
-        scroll-behavior: smooth;
+        scroll-behavior: auto; /* Managed by JS for precision */
+        background-color: #000;
       }
+
       /* Webtoon Mode */
       .view-webtoon #image-container {
         overflow-y: scroll;
@@ -139,10 +195,11 @@
       .view-webtoon img {
         display: block;
         width: 100%;
-        max-width: 800px;
+        max-width: 900px; /* Wider max-width for Desktop */
         margin: 0 auto;
         height: auto;
       }
+
       /* Pagination Mode */
       .view-pagination #image-container {
         display: flex;
@@ -153,7 +210,10 @@
         height: 100vh;
         object-fit: contain;
         flex-shrink: 0;
+        user-select: none;
       }
+
+      /* Navigation Overlay (Click Zones) */
       .nav-overlay {
         position: fixed;
         top: 0;
@@ -170,7 +230,7 @@
         position: absolute;
         left: 0;
         top: 0;
-        width: 35%;
+        width: 30%;
         height: 100%;
         cursor: w-resize;
       }
@@ -178,19 +238,20 @@
         position: absolute;
         right: 0;
         top: 0;
-        width: 35%;
+        width: 30%;
         height: 100%;
         cursor: e-resize;
       }
       #nav-center {
         position: absolute;
-        left: 35%;
+        left: 30%;
         top: 0;
-        width: 30%;
+        width: 40%;
         height: 100%;
         cursor: pointer;
       }
-      /* Floating Footer */
+
+      /* Footer */
       #reader-footer {
         position: fixed;
         bottom: 0;
@@ -198,10 +259,10 @@
         right: 0;
         z-index: 100;
         background-color: var(--footer-bg);
-        backdrop-filter: blur(14px) saturate(180%);
-        -webkit-backdrop-filter: blur(14px) saturate(180%);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
         border-top: 1px solid var(--border-color);
-        height: 45px;
+        height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -212,27 +273,39 @@
       #reader-footer.hidden {
         transform: translateY(100%);
       }
+
       #page-progress {
-        width: 100%;
-        max-width: 400px;
-        height: 8px;
+        flex-grow: 1;
+        max-width: 600px;
+        height: 6px;
+        border-radius: 3px;
+        cursor: pointer;
         -webkit-appearance: none;
-        appearance: none;
       }
       #page-progress::-webkit-progress-bar {
         background-color: rgba(255, 255, 255, 0.15);
-        border-radius: 4px;
+        border-radius: 3px;
       }
       #page-progress::-webkit-progress-value {
         background-color: var(--accent-color);
-        border-radius: 4px;
+        border-radius: 3px;
+        transition: width 0.1s linear;
       }
+
       #page-indicator {
         font-size: 14px;
-        color: #ccc;
+        color: #ddd;
+        font-variant-numeric: tabular-nums;
         font-weight: 500;
-        min-width: 60px;
+        min-width: 70px;
         text-align: center;
+      }
+
+      /* Desktop Specific Tweaks */
+      @media (min-width: 768px) {
+        .header-center h1 { font-size: 18px; }
+        .header-center p { font-size: 13px; }
+        #page-progress { height: 8px; }
       }
     </style>
   </head>
@@ -243,17 +316,17 @@
           <i class="fa fa-arrow-left"></i>
         </button>
         <div class="header-center">
-          <h1 id="manga-title">Loading...</h1>
-          <p id="chapter-details"></p>
+          <h1 id="manga-title">Loading Series...</h1>
+          <p id="chapter-details">Loading Chapter...</p>
         </div>
       </div>
       <div class="header-right">
         <div class="mode-switcher">
-          <button id="mode-pagination" class="active">Paged</button>
-          <button id="mode-webtoon">Scroll</button>
+          <button id="mode-pagination" class="active"><i class="fa fa-book-open"></i> Paged</button>
+          <button id="mode-webtoon"><i class="fa fa-scroll"></i> Scroll</button>
         </div>
         <button id="next-chapter-btn">
-          Next <i class="fa fa-arrow-right"></i>
+          Next <i class="fa fa-chevron-right" style="margin-left:5px;"></i>
         </button>
       </div>
     </header>
@@ -263,18 +336,19 @@
     <main id="image-container"></main>
 
     <div class="nav-overlay">
-      <div id="nav-left"></div>
-      <div id="nav-center"></div>
-      <div id="nav-right"></div>
+      <div id="nav-left" title="Previous Page"></div>
+      <div id="nav-center" title="Toggle Menu"></div>
+      <div id="nav-right" title="Next Page"></div>
     </div>
 
     <footer id="reader-footer">
-      <progress id="page-progress" value="0" max="100"></progress>
       <span id="page-indicator">0 / 0</span>
+      <progress id="page-progress" value="0" max="100"></progress>
     </footer>
 
     <script>
       document.addEventListener("DOMContentLoaded", () => {
+        // --- Elements ---
         const container = document.getElementById("image-container");
         const loader = document.getElementById("loader");
         const header = document.getElementById("reader-header");
@@ -288,251 +362,306 @@
         const pageProgress = document.getElementById("page-progress");
         const pageIndicator = document.getElementById("page-indicator");
 
+        // --- State ---
         let imageLinks = [];
         let currentPage = 0;
         let source, mangaId, chapterId;
-        let chapterData = null; // To store chapter details
-        const serverIp =
-          localStorage.getItem("extension_server_ip") || "localhost";
-        const serverUrl = `https://${serverIp}`;
+        let chapterData = null; 
+        const serverIp = localStorage.getItem("extension_server_ip") || "localhost";
+        const serverUrl = `http://${serverIp}:7275`;
         const READER_MODE_KEY = "reader_view_mode";
+        const HISTORY_KEY = "reading_history";
 
+        // --- Initialization ---
         function init() {
           const pathParts = window.location.pathname.split("/");
-          source = pathParts[2]; // e.g., 'jikan' or 'mangadex'
-          mangaId = pathParts[3]; // mal_id or mangadex_manga_uuid
-          chapterId = pathParts[4]; // chapter_number or mangadex_chapter_uuid
+          // URL Structure expected: /read/{source}/{mangaId}/{chapterId}
+          if (pathParts.length >= 5) {
+            source = pathParts[2];
+            mangaId = pathParts[3];
+            chapterId = pathParts[4];
+          } else {
+            console.error("Invalid URL structure");
+            return;
+          }
 
-          // Apply saved reading mode on initialization
+          // Load View Preference
           const savedMode = localStorage.getItem(READER_MODE_KEY);
           if (savedMode) {
-            setMode(savedMode, true); // Pass true to prevent initial scrollIntoView issues
+            setMode(savedMode, true);
           }
 
           fetchMangaTitle();
-          fetchImages();
+          fetchImages(); // This triggers history restore after loading
           fetchChapterDetails();
           setupControls();
-          markChapterAsRead();
         }
 
+        // --- History Management ---
+
+        /**
+         * Structure of Reading History (LocalStorage):
+         * [
+         *   {
+         *     mangaId: "123",
+         *     source: "mangadex",
+         *     chapters: {
+         *       "chapter-uuid": {
+         *         state: "ongoing" | "finished",
+         *         page: 4,
+         *         timestamp: 123456789,
+         *         source: "mangadex"
+         *       }
+         *     }
+         *   }
+         * ]
+         */
+
+        function getHistory() {
+          try {
+            return JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
+          } catch (e) {
+            return [];
+          }
+        }
+
+        function saveHistory(history) {
+          localStorage.setItem(HISTORY_KEY, JSON.stringify(history));
+        }
+
+        function restoreReadingProgress() {
+          const history = getHistory();
+          const seriesEntry = history.find(h => h.mangaId === mangaId && h.source === source);
+
+          if (seriesEntry && seriesEntry.chapters && seriesEntry.chapters[chapterId]) {
+            const record = seriesEntry.chapters[chapterId];
+            if (record.page && record.page < imageLinks.length) {
+              console.log("Restoring to page:", record.page);
+              currentPage = record.page;
+              
+              // Apply UI updates immediately
+              if (document.body.classList.contains("view-pagination")) {
+                 updatePagination();
+              } else {
+                 // For webtoon, we need to wait until images render to scroll accurately
+                 // This is handled in setMode or post-load logic
+                 setTimeout(() => {
+                   const imgs = container.getElementsByTagName("img");
+                   if(imgs[currentPage]) imgs[currentPage].scrollIntoView({ block: "start" });
+                 }, 200);
+              }
+              updateFooter();
+            }
+          }
+        }
+
+        function updateHistory() {
+          if (imageLinks.length === 0) return;
+
+          let history = getHistory();
+          
+          // 1. Find or Create Series Entry
+          let seriesEntry = history.find(h => h.mangaId === mangaId && h.source === source);
+          if (!seriesEntry) {
+            seriesEntry = {
+              mangaId: mangaId,
+              source: source,
+              chapters: {}
+            };
+            history.push(seriesEntry);
+          }
+
+          // 2. Determine State
+          // If we are on the last page (or close to end in scroll), mark finished
+          const isFinished = currentPage >= imageLinks.length - 1;
+
+          // 3. Create/Update Chapter Object
+          seriesEntry.chapters[chapterId] = {
+            state: isFinished ? "finished" : "ongoing",
+            page: currentPage,
+            timestamp: Date.now(),
+            source: source
+          };
+
+          // 4. Save
+          saveHistory(history);
+        }
+
+        // --- Fetching Logic ---
+
         async function fetchChapterDetails() {
-          if (source !== "mangadex") {
-            // Fallback for non-mangadex sources
+           // (Logic unchanged from provided example, but ensured robust error handling)
+           if (source !== "mangadex") {
             chapterDetailsEl.textContent = `Chapter ${chapterId}`;
-            fetchLegacyChapterNav(); // Use old logic for jikan etc.
+            fetchLegacyChapterNav();
             return;
           }
 
           try {
             const url = `${serverUrl}/mangadex/manga/${mangaId}/chapter-nav-details/${chapterId}`;
             const response = await fetch(url);
-            if (!response.ok)
-              throw new Error("Failed to fetch chapter details");
+            if (!response.ok) throw new Error("Nav fetch failed");
 
             const navData = await response.json();
             chapterData = navData.current_chapter;
 
-            if (!chapterData || !chapterData.attributes) {
-              throw new Error("Invalid chapter data received");
+            if (chapterData?.attributes) {
+              const chNum = chapterData.attributes.chapter;
+              const title = chapterData.attributes.title;
+              chapterDetailsEl.textContent = `Chapter ${chNum}${title ? ': ' + title : ''}`;
+            } else {
+              chapterDetailsEl.textContent = `Chapter ${chapterId}`;
             }
 
-            // Update chapter title
-            const chapterNum = chapterData.attributes.chapter;
-            const chapterTitle = chapterData.attributes.title;
-            let displayTitle = `Chapter ${chapterNum}`;
-            if (chapterTitle && chapterTitle.trim() !== "") {
-              displayTitle += `: ${chapterTitle}`;
-            }
-            chapterDetailsEl.textContent = displayTitle;
-
-            // Setup next chapter button
             if (navData.next_chapter_id) {
               nextChapterBtn.style.display = "block";
               nextChapterBtn.onclick = () => {
                 window.location.href = `/read/${source}/${mangaId}/${navData.next_chapter_id}`;
               };
-            } else {
-              nextChapterBtn.style.display = "none";
             }
           } catch (error) {
-            console.error("Could not fetch chapter nav details:", error);
-            chapterDetailsEl.textContent = `Chapter ID: ${chapterId.slice(
-              0,
-              8
-            )}...`; // Fallback
-            fetchLegacyChapterNav(); // Try old method as a fallback
+            console.warn("Nav details error:", error);
+            chapterDetailsEl.textContent = `Chapter ${chapterId}`;
+            fetchLegacyChapterNav();
           }
         }
 
         async function fetchMangaTitle() {
-          let url;
-          if (source === "mangadex") {
-            url = `${serverUrl}/mangadex/manga/${mangaId}`;
-          } else {
-            url = `https://api.jikan.moe/v4/manga/${mangaId}`;
-          }
+          // (Logic unchanged)
+          let url = source === "mangadex" 
+            ? `${serverUrl}/mangadex/manga/${mangaId}`
+            : `https://api.jikan.moe/v4/manga/${mangaId}`;
 
           try {
             const res = await fetch(url);
             const data = await res.json();
             if (source === "mangadex") {
-              mangaTitleEl.textContent =
-                data.attributes.title.en ||
-                Object.values(data.attributes.title)[0];
+              mangaTitleEl.textContent = data.attributes.title.en || Object.values(data.attributes.title)[0];
             } else {
               mangaTitleEl.textContent = data.data?.title || "Unknown Title";
             }
           } catch (e) {
-            mangaTitleEl.textContent = "Unknown Title";
-          }
-        }
-
-        function markChapterAsRead() {
-          const historyKey =
-            source === "jikan"
-              ? `${mangaId}/${chapterId}`
-              : `mangadex:${mangaId}/${chapterId}`;
-
-          try {
-            let history =
-              JSON.parse(localStorage.getItem("reading_history")) || [];
-            
-            // Remove the key if it already exists to avoid duplicates and to move it to the end.
-            const index = history.indexOf(historyKey);
-            if (index > -1) {
-              history.splice(index, 1);
-            }
-
-            history.push(historyKey); // Add to the end to mark it as most recently read.
-
-            localStorage.setItem("reading_history", JSON.stringify(history));
-          } catch (e) {
-            console.error("Could not update reading history:", e);
+            mangaTitleEl.textContent = "Reader";
           }
         }
 
         async function fetchLegacyChapterNav() {
-          let chapterListUrl;
-          if (source === "mangadex") {
-            // This part is now a fallback
-            chapterListUrl = `${serverUrl}/mangadex/manga/${mangaId}/chapters`;
-          } else {
-            chapterListUrl = `${serverUrl}/chapters/${mangaId}`;
-          }
-
+          const url = source === "mangadex" 
+             ? `${serverUrl}/mangadex/manga/${mangaId}/chapters`
+             : `${serverUrl}/chapters/${mangaId}`;
+          
           try {
-            const response = await fetch(chapterListUrl);
-            if (!response.ok) return;
-
-            const data = await response.json();
-            const chapters = data.chapters;
-
-            const currentChapterIndex = chapters.findIndex(
-              (c) => c.id == chapterId || c.chapter_number == chapterId
-            );
-
-            // The original code had a bug here (currentChapterIndex > 0), which would be previous chapter.
-            // Assuming ascending sort order (which the backend provides), next is +1.
-            if (
-              currentChapterIndex !== -1 &&
-              currentChapterIndex + 1 < chapters.length
-            ) {
-              const nextChapter = chapters[currentChapterIndex + 1];
-              nextChapterBtn.style.display = "block";
-              nextChapterBtn.onclick = () => {
-                window.location.href = `/read/${source}/${mangaId}/${
-                  nextChapter.id || nextChapter.chapter_number
-                }`;
-              };
-            }
-          } catch (error) {
-            console.error(
-              "Could not fetch chapter list for navigation:",
-              error
-            );
-          }
+             const resp = await fetch(url);
+             if(!resp.ok) return;
+             const data = await resp.json();
+             const chapters = data.chapters;
+             const idx = chapters.findIndex(c => c.id == chapterId || c.chapter_number == chapterId);
+             
+             if(idx !== -1 && idx + 1 < chapters.length) {
+               const next = chapters[idx+1];
+               nextChapterBtn.style.display = "block";
+               nextChapterBtn.onclick = () => {
+                  window.location.href = `/read/${source}/${mangaId}/${next.id || next.chapter_number}`;
+               };
+             }
+          } catch(e) { console.error(e); }
         }
 
         async function fetchImages() {
-          let imagesUrl;
-          if (source === "mangadex") {
-            imagesUrl = `${serverUrl}/mangadex/chapter/${chapterId}`;
-          } else {
-            imagesUrl = `${serverUrl}/retrieve/${mangaId}/${chapterId}`;
-          }
+          let url = source === "mangadex" 
+            ? `${serverUrl}/mangadex/chapter/${chapterId}`
+            : `${serverUrl}/retrieve/${mangaId}/${chapterId}`;
 
           try {
-            const response = await fetch(imagesUrl);
-            if (!response.ok)
-              throw new Error(`Server responded with ${response.status}`);
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Image fetch failed");
             imageLinks = await response.json();
 
-            if (imageLinks.length === 0) {
-              loader.style.borderColor = "#ff4545";
-              throw new Error("No images found for this chapter.");
-            }
+            if (!imageLinks || imageLinks.length === 0) throw new Error("No images found");
 
             await preloadInitialImages();
           } catch (error) {
-            console.error("Failed to fetch images:", error);
-            mangaTitleEl.textContent = "Error";
-            chapterDetailsEl.textContent = error.message;
-            loader.style.display = "none";
+            console.error(error);
+            loader.style.borderColor = "red";
+            chapterDetailsEl.textContent = "Error loading images.";
           }
         }
 
         async function preloadInitialImages() {
+          // Create all IMG elements first (lazy loading structure)
           imageLinks.forEach((src) => {
             const img = document.createElement("img");
+            // Set a dummy transparent pixel or nothing initially to prevent broken icons
+            img.loading = "lazy"; // Native lazy loading
             container.appendChild(img);
           });
 
+          // Preload first few
           const images = container.getElementsByTagName("img");
-          const imagesToPreload = Array.from(images).slice(0, 4);
+          const toPreload = Array.from(images).slice(0, 4);
 
-          const promises = imagesToPreload.map((img, index) => {
+          // Detect Aspect Ratio on first image for Auto-Webtoon Mode
+          if (toPreload[0]) {
+             const tempImg = new Image();
+             tempImg.src = imageLinks[0];
+             await new Promise(r => {
+                tempImg.onload = () => {
+                   // If height is significantly larger than width (2x), assume Webtoon
+                   const isTall = tempImg.height > tempImg.width * 2;
+                   const userHasSetMode = localStorage.getItem(READER_MODE_KEY);
+                   
+                   if (isTall && !userHasSetMode) {
+                      setMode("webtoon", true);
+                   }
+                   r();
+                };
+                tempImg.onerror = r;
+             });
+          }
+
+          // Actually load sources for first few
+          const promises = toPreload.map((img, index) => {
             return new Promise((resolve) => {
               img.onload = resolve;
-              img.onerror = resolve; // Don't reject, just move on
+              img.onerror = resolve;
               img.src = imageLinks[index];
             });
           });
 
           await Promise.all(promises);
-
+          
           loader.style.display = "none";
-          updatePagination();
-          updateFooter();
+          
+          // Restore progress AFTER images exist
+          restoreReadingProgress();
+          
+          // Load the rest in background
           loadRemainingImages();
         }
 
         function loadRemainingImages() {
           const images = container.getElementsByTagName("img");
-          Array.from(images)
-            .slice(4)
-            .forEach((img, index) => {
-              if (!img.src) {
-                // Only load if not already loaded
-                img.src = imageLinks[index + 4];
-              }
-            });
+          Array.from(images).slice(4).forEach((img, index) => {
+              img.src = imageLinks[index + 4];
+          });
         }
 
+        // --- View & Navigation Logic ---
+
         function updatePagination() {
+          // Horizontal translate for pagination
           container.scrollLeft = currentPage * window.innerWidth;
+          updateHistory(); // Save progress
         }
 
         function updateFooter() {
           if (imageLinks.length > 0) {
             if (document.body.classList.contains("view-pagination")) {
-              pageIndicator.textContent = `${currentPage + 1} / ${
-                imageLinks.length
-              }`;
+              pageIndicator.textContent = `${currentPage + 1} / ${imageLinks.length}`;
               pageProgress.value = currentPage + 1;
               pageProgress.max = imageLinks.length;
             } else {
-              updateWebtoonProgress();
+              // Webtoon logic is handled in scroll listener
             }
           }
         }
@@ -540,35 +669,31 @@
         function updateWebtoonProgress() {
           if (imageLinks.length === 0) return;
 
-          const scrollableHeight =
-            container.scrollHeight - container.clientHeight;
-          const progress =
-            scrollableHeight > 0
-              ? (container.scrollTop / scrollableHeight) * 100
-              : 0;
+          // Update Progress Bar
+          const scrollableHeight = container.scrollHeight - container.clientHeight;
+          const progress = scrollableHeight > 0 ? (container.scrollTop / scrollableHeight) * 100 : 0;
           pageProgress.value = progress;
           pageProgress.max = 100;
 
+          // Determine Current Page Index based on visibility
           const images = container.getElementsByTagName("img");
-          let visiblePage = 0;
+          let visiblePage = currentPage; // default to current
+          
+          // Scan images to find which one is mostly visible
           for (let i = 0; i < images.length; i++) {
             const rect = images[i].getBoundingClientRect();
-            if (rect.top < container.clientHeight && rect.bottom > 0) {
-              // A more robust check for visibility
-              const visiblePart =
-                Math.min(rect.bottom, container.clientHeight) -
-                Math.max(rect.top, 0);
-              if (visiblePart > 100) {
-                // at least 100px of the image is visible
-                visiblePage = i;
-                break;
-              }
+            // If the top of the image is within the viewport (with some buffer)
+            // Or if the image takes up the whole screen
+            if (rect.bottom > 0 && rect.top < window.innerHeight / 2) {
+              visiblePage = i;
             }
           }
-          currentPage = visiblePage;
-          pageIndicator.textContent = `${currentPage + 1} / ${
-            imageLinks.length
-          }`;
+          
+          if (visiblePage !== currentPage) {
+             currentPage = visiblePage;
+             pageIndicator.textContent = `${currentPage + 1} / ${imageLinks.length}`;
+             updateHistory(); // Save progress on page change
+          }
         }
 
         function changePage(direction) {
@@ -585,64 +710,72 @@
           footer.classList.toggle("hidden");
         }
 
-        function setupControls() {
-          modePaginationBtn.addEventListener("click", () =>
-            setMode("pagination")
-          );
-          modeWebtoonBtn.addEventListener("click", () => setMode("webtoon"));
-
-          container.addEventListener("scroll", () => {
-            if (document.body.classList.contains("view-webtoon")) {
-              updateWebtoonProgress();
-            }
-          });
-
-          document
-            .getElementById("nav-left")
-            .addEventListener("click", () => changePage(-1));
-          document
-            .getElementById("nav-right")
-            .addEventListener("click", () => changePage(1));
-          document
-            .getElementById("nav-center")
-            .addEventListener("click", toggleUI);
-
-          backBtn.addEventListener("click", () => {
-            if (window.parent && window.parent !== window) {
-              window.parent.postMessage("close-reader-modal", "*");
-            } else if (window.history.length > 1) {
-              window.history.back();
-            }
-          });
-        }
-
         function setMode(mode, isInitial = false) {
           if (mode === "pagination") {
             document.body.classList.remove("view-webtoon");
             document.body.classList.add("view-pagination");
             modePaginationBtn.classList.add("active");
             modeWebtoonBtn.classList.remove("active");
+            
+            // Fix layout
+            container.scrollLeft = currentPage * window.innerWidth;
             updatePagination();
           } else {
             document.body.classList.remove("view-pagination");
             document.body.classList.add("view-webtoon");
             modeWebtoonBtn.classList.add("active");
             modePaginationBtn.classList.remove("active");
-            // Only scroll into view if it's not the initial setup,
-            // to prevent scrolling before images are loaded.
+            
+            // Scroll to current page in vertical mode
             if (!isInitial) {
               const imgs = container.getElementsByTagName("img");
               if (imgs[currentPage]) {
-                imgs[currentPage].scrollIntoView({
-                  behavior: "auto",
-                  block: "start",
-                });
+                imgs[currentPage].scrollIntoView({ behavior: "auto", block: "start" });
               }
             }
           }
-          // Always save preference when mode is set
-          localStorage.setItem(READER_MODE_KEY, mode);
+          
+          if (!isInitial) {
+             localStorage.setItem(READER_MODE_KEY, mode);
+          }
           updateFooter();
+        }
+
+        // --- Controls Setup ---
+
+        function setupControls() {
+          modePaginationBtn.addEventListener("click", () => setMode("pagination"));
+          modeWebtoonBtn.addEventListener("click", () => setMode("webtoon"));
+
+          // Scroll Listener (Throttled slightly for performance if needed, but modern browsers handle this okay)
+          container.addEventListener("scroll", () => {
+            if (document.body.classList.contains("view-webtoon")) {
+              updateWebtoonProgress();
+            }
+          });
+
+          // Keyboard Support
+          document.addEventListener("keydown", (e) => {
+            if(document.body.classList.contains("view-pagination")) {
+               if(e.key === "ArrowRight") changePage(1);
+               if(e.key === "ArrowLeft") changePage(-1);
+            }
+          });
+
+          document.getElementById("nav-left").addEventListener("click", () => changePage(-1));
+          document.getElementById("nav-right").addEventListener("click", () => changePage(1));
+          document.getElementById("nav-center").addEventListener("click", toggleUI);
+
+          backBtn.addEventListener("click", () => {
+            // Try to communicate with parent if iframe, else go back
+            if (window.parent && window.parent !== window) {
+              window.parent.postMessage("close-reader-modal", "*");
+            } else if (window.history.length > 1) {
+              window.history.back();
+            } else {
+               window.location.href = "/"; // Fallback home
+            }
+          });
         }
 
         init();

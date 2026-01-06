@@ -1,0 +1,1263 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Settings - Media App</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bitcount+Grid+Single:wght@100..900&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <style>
+      :root {
+        --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+          Roboto, Helvetica, Arial, sans-serif;
+        --background-primary: #121212;
+        --background-secondary: #1e1e1e;
+        --background-tertiary-hover: #2a2a2a;
+        --background-modal: #252525;
+        --foreground-primary: #e6e6e6;
+        --foreground-secondary: #a0a0a0;
+        --foreground-tertiary: #6b6b6b;
+        --border-color: #2c2c2c;
+        --input-border-color: #3a3a3c;
+        --accent-primary: #ff9500;
+        --accent-primary-rgb: 255, 149, 0;
+        --accent-primary-hover: #e68600;
+        --destructive: #ff453a;
+        --radius-sm: 8px;
+        --radius-md: 16px;
+      }
+      body[data-theme="light"] {
+        --background-primary: #f0f2f5;
+        --background-secondary: #ffffff;
+        --background-tertiary-hover: #f1f1f1;
+        --background-modal: #ffffff;
+        --foreground-primary: #1c1c1e;
+        --foreground-secondary: #636366;
+        --border-color: #e5e5e5;
+        --input-border-color: #c7c7cc;
+      }
+      html,
+      body {
+        box-sizing: border-box;
+        font-family: var(--font-sans);
+        background-color: var(--background-primary);
+        color: var(--foreground-primary);
+        margin: 0;
+        padding: 1rem;
+        -webkit-font-smoothing: antialiased;
+      }
+      .app-container {
+        max-width: 640px;
+        margin: 0 auto;
+        padding-bottom: 4rem;
+      }
+      .settings-sections {
+        display: flex;
+        flex-direction: column;
+        gap: 1.5rem;
+      }
+      .user-profile-header {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+        padding: 2rem 1rem;
+      }
+      .user-profile-header img {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        object-fit: cover;
+        cursor: pointer;
+      }
+      .user-profile-header .username {
+        font-weight: 700;
+        font-size: 1.75rem;
+      }
+      .settings-group {
+        background-color: var(--background-secondary);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+      }
+      .settings-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem 1.25rem;
+        cursor: pointer;
+        border-bottom: 1px solid var(--border-color);
+      }
+      .settings-group .settings-item:last-child {
+        border-bottom: none;
+      }
+      .settings-item:hover {
+        background-color: var(--background-tertiary-hover);
+      }
+      .settings-item .item-icon {
+        font-size: 1rem;
+        color: var(--foreground-secondary);
+        width: 24px;
+        text-align: center;
+      }
+      .settings-item .item-text {
+        flex-grow: 1;
+        font-weight: 500;
+      }
+      .settings-item .item-action {
+        color: var(--foreground-secondary);
+      }
+      .toggle-switch {
+        position: relative;
+        display: inline-block;
+        width: 51px;
+        height: 31px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        inset: 0;
+        background-color: var(--foreground-tertiary);
+        transition: 0.3s;
+        border-radius: 34px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 27px;
+        width: 27px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        transition: 0.3s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: var(--accent-primary);
+      }
+      input:checked + .slider:before {
+        transform: translateX(20px);
+      }
+      .custom-dropdown-wrapper {
+        position: relative;
+        min-width: 160px;
+      }
+      .custom-dropdown-btn {
+        width: 100%;
+        background: none;
+        border: none;
+        color: var(--foreground-secondary);
+        font-size: 1rem;
+        padding: 0.5rem 2rem 0.5rem 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+      }
+      .custom-dropdown-list {
+        display: none;
+        position: absolute;
+        top: 110%;
+        right: 0;
+        width: 100%;
+        background: var(--background-secondary);
+        border-radius: var(--radius-sm);
+        z-index: 1002;
+        border: 1px solid var(--border-color);
+        list-style: none;
+        padding: 0.25rem 0;
+      }
+      .custom-dropdown-wrapper.is-open .custom-dropdown-list {
+        display: block;
+      }
+      .custom-dropdown-list li {
+        padding: 0.75rem 1rem;
+        cursor: pointer;
+      }
+      .custom-dropdown-list li:hover,
+      .custom-dropdown-list li.selected {
+        background: var(--accent-primary);
+        color: #fff;
+      }
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(8px);
+        display: none;
+        justify-content: center;
+        align-items: center;
+        z-index: 1000;
+      }
+      .modal-backdrop.active {
+        display: flex;
+      }
+      .modal-content {
+        background-color: var(--background-modal);
+        padding: 2rem;
+        border-radius: var(--radius-md);
+        width: 90%;
+        max-width: 400px;
+        position: relative;
+      }
+      .modal-actions {
+        display: flex;
+        gap: 1rem;
+        margin-top: 2rem;
+      }
+      .primary-button {
+        width: 100%;
+        padding: 0.875rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        border: none;
+        background-color: var(--accent-primary);
+        color: white;
+      }
+      .secondary-button {
+        width: 100%;
+        padding: 0.875rem;
+        font-size: 1rem;
+        font-weight: 600;
+        border-radius: var(--radius-sm);
+        cursor: pointer;
+        border: 1px solid var(--border-color);
+        background-color: transparent;
+        color: var(--foreground-primary);
+      }
+      .ip-input {
+        width: 100%;
+        background: var(--background-primary);
+        border: 1px solid var(--border-color);
+        border-radius: var(--radius-sm);
+        padding: 1rem;
+        font-size: 1rem;
+        color: var(--foreground-primary);
+        outline: none;
+        transition: box-shadow 0.2s, border-color 0.2s;
+        box-sizing: border-box;
+      }
+      .status-indicator {
+        margin-top: 1rem;
+        font-size: 0.9rem;
+        min-height: 1.25rem;
+        color: var(--foreground-secondary);
+      }
+      .status-indicator.connected {
+        color: #34c759;
+      }
+      .status-indicator.error {
+        color: #ff3b30;
+      }
+      .module-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+      .module-list .settings-item {
+        justify-content: space-between;
+      }
+      .module-reorder-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-left: 1rem;
+      }
+      .module-reorder-controls i {
+        cursor: pointer;
+        color: var(--foreground-secondary);
+        padding: 4px;
+        border-radius: 4px;
+      }
+      .module-reorder-controls i:hover {
+        background-color: var(--background-tertiary-hover);
+      }
+      #moduleCategoriesContainer {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .modal-close-btn {
+        background: none;
+        border: none;
+        color: var(--foreground-secondary);
+        cursor: pointer;
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.5rem;
+      }
+      /* MODIFICATION: Styles for the About modal iframe */
+      #aboutModal .modal-content {
+        padding: 0;
+        overflow: hidden;
+        background-color: transparent;
+        height: 80%;
+        max-height: 600px;
+      }
+      #aboutIframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+        border-radius: var(--radius-md);
+      }
+    </style>
+  </head>
+  <body data-theme="dark">
+    <div class="background-gradient"></div>
+    <div id="loadingScreen" style="text-align: center; padding-top: 10rem">
+      <h2>Loading Profile...</h2>
+    </div>
+
+    <div class="app-container" id="settingsContainer" style="display: none">
+      <div class="settings-sections">
+        <header class="user-profile-header">
+          <img
+            id="userAvatar"
+            src="https://placehold.co/100/1e1e1e/a0a0a0?text=?"
+            alt="User Avatar"
+          />
+          <input
+            type="file"
+            id="avatarUpload"
+            accept="image/*"
+            style="display: none"
+          />
+          <div>
+            <h1 class="username" id="usernameDisplay">Profile</h1>
+            <a
+              href="#"
+              id="editUsernameBtn"
+              style="
+                color: var(--foreground-secondary);
+                text-decoration: none;
+                font-size: 0.9rem;
+                font-weight: 500;
+              "
+            >
+              <i
+                class="fas fa-pencil-alt"
+                style="margin-right: 4px; font-size: 0.8rem"
+              ></i
+              >Edit Profile
+            </a>
+          </div>
+        </header>
+
+        <div class="settings-group">
+          <div class="settings-item" id="switchProfileItem">
+            <i class="item-icon fas fa-users"></i
+            ><span class="item-text">Change Profile</span
+            ><i class="item-action fas fa-chevron-right"></i>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item">
+            <i class="item-icon fas fa-palette"></i
+            ><span class="item-text">Light Mode</span>
+            <div class="item-action">
+              <label class="toggle-switch"
+                ><input type="checkbox" id="themeToggle" /><span
+                  class="slider"
+                ></span
+              ></label>
+            </div>
+          </div>
+          <div class="settings-item">
+            <i class="item-icon fas fa-bell"></i
+            ><span class="item-text">Push Notifications</span>
+            <div class="item-action">
+              <label class="toggle-switch"
+                ><input type="checkbox" id="pushNotificationsToggle" /><span
+                  class="slider"
+                ></span
+              ></label>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item">
+            <i class="item-icon fas fa-download"></i
+            ><span class="item-text">Download Quality</span>
+            <div
+              class="item-action custom-dropdown-wrapper"
+              id="customDropdownWrapper"
+            >
+              <button
+                type="button"
+                class="custom-dropdown-btn"
+                id="customDropdownBtn"
+              >
+                <span id="customDropdownSelected">1080p</span
+                ><i class="fas fa-chevron-down"></i>
+              </button>
+              <ul class="custom-dropdown-list" id="customDropdownList">
+                <li data-value="1080p">1080p (Best)</li>
+                <li data-value="720p">720p (Good)</li>
+                <li data-value="360p">360p (Data Saver)</li>
+              </ul>
+            </div>
+          </div>
+          <div class="settings-item" id="extensionServerItem">
+            <i class="item-icon fas fa-server"></i
+            ><span class="item-text">Extension Server</span
+            ><i class="item-action fas fa-chevron-right"></i>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item" id="moduleManagementItem">
+            <i class="item-icon fas fa-puzzle-piece"></i
+            ><span class="item-text">Module Management</span
+            ><i class="item-action fas fa-chevron-right"></i>
+          </div>
+        </div>
+
+        <div class="settings-group">
+          <div class="settings-item" id="addOnManagementItem">
+            <i class="item-icon fas fa-puzzle-piece"></i
+            ><span class="item-text">Add-on Management</span
+            ><i class="item-action fas fa-chevron-right"></i>
+          </div>
+        </div>
+
+        <!-- MODIFICATION: New group for About and Cache -->
+        <div class="settings-group">
+          <div class="settings-item" id="clearCacheItem">
+            <i class="item-icon fas fa-broom"></i>
+            <span class="item-text">Clear Cache</span>
+            <i class="item-action fas fa-chevron-right"></i>
+          </div>
+          <div class="settings-item" id="aboutItem">
+            <i class="item-icon fas fa-info-circle"></i>
+            <span class="item-text">About</span>
+            <i class="item-action fas fa-chevron-right"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- MODIFICATION: New About Modal with iFrame -->
+    <div id="aboutModal" class="modal-backdrop">
+      <div class="modal-content">
+        <iframe
+          id="aboutIframe"
+          src="about.html"
+          title="About the developer"
+        ></iframe>
+      </div>
+      <button id="closeAboutModalBtn" class="modal-close-btn">×</button>
+    </div>
+
+    <div id="extensionServerModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Extension Server</h2>
+        <p
+          style="
+            color: var(--foreground-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+          "
+        >
+          Enter the IP address of your extension server.
+        </p>
+        <input
+          type="text"
+          id="ip-input"
+          class="ip-input"
+          placeholder="e.g., 192.168.1.100"
+        />
+        <div id="status-indicator" class="status-indicator"></div>
+        <div class="modal-actions">
+          <button id="checkConnectionBtn" class="secondary-button">
+            Check Connection
+          </button>
+          <button id="saveConnectionBtn" class="primary-button" disabled>
+            Save
+          </button>
+        </div>
+        <button id="closeModalBtn" class="modal-close-btn">×</button>
+      </div>
+    </div>
+
+    <div id="editProfileModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Edit Profile</h2>
+        <p
+          style="
+            color: var(--foreground-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+          "
+        >
+          Enter your new username.
+        </p>
+        <input
+          type="text"
+          id="username-input"
+          class="ip-input"
+          placeholder="New username"
+        />
+        <div class="modal-actions">
+          <button id="saveUsernameBtn" class="primary-button">Save</button>
+        </div>
+        <button id="closeEditProfileModalBtn" class="modal-close-btn">×</button>
+      </div>
+    </div>
+
+    <div id="moduleManagementModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Module Management</h2>
+        <p
+          style="
+            color: var(--foreground-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+          "
+        >
+          Enable/disable modules and set their preferred order.
+        </p>
+        <div id="moduleCategoriesContainer"></div>
+        <div class="modal-actions">
+          <button id="saveModulePreferencesBtn" class="primary-button">
+            Save Preferences
+          </button>
+        </div>
+        <button id="closeModuleModalBtn" class="modal-close-btn">×</button>
+      </div>
+    </div>
+
+    <div id="addOnManagementModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Add-on Management</h2>
+        <p
+          style="
+            color: var(--foreground-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+          "
+        >
+          Configure your installed add-ons.
+        </p>
+        <div id="addOnCategoriesContainer"></div>
+        <div class="modal-actions">
+          <button id="saveAddOnPreferencesBtn" class="primary-button">
+            Save Preferences
+          </button>
+        </div>
+        <button id="closeAddOnModalBtn" class="modal-close-btn">×</button>
+      </div>
+    </div>
+
+    <div id="clearCacheModal" class="modal-backdrop">
+      <div class="modal-content">
+        <h2>Clear Cache</h2>
+        <p
+          style="
+            color: var(--foreground-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+          "
+        >
+          This can help resolve display issues or problems with outdated
+          content.
+        </p>
+        <div class="modal-actions" style="flex-direction: column; gap: 0.75rem">
+          <button id="clearPagesBtn" class="secondary-button">
+            Clear Cached Pages & Resources
+          </button>
+          <button
+            id="clearAllBtn"
+            class="primary-button"
+            style="background-color: var(--destructive)"
+          >
+            Clear All Site Data (Logout)
+          </button>
+          <button
+            id="closeCacheModalBtn"
+            class="secondary-button"
+            style="margin-top: 1rem"
+          >
+            Cancel
+          </button>
+        </div>
+        <button id="closeCacheModalBtnCross" class="modal-close-btn">×</button>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        let currentProfile = null;
+        const loadingScreen = document.getElementById("loadingScreen");
+        const settingsContainer = document.getElementById("settingsContainer");
+        const userAvatar = document.getElementById("userAvatar");
+        const avatarUpload = document.getElementById("avatarUpload");
+        const usernameDisplay = document.getElementById("usernameDisplay");
+        const switchProfileItem = document.getElementById("switchProfileItem");
+        const extensionServerItem = document.getElementById(
+          "extensionServerItem"
+        );
+
+        function getApiUrl(path) {
+          const isDeployed = window.location.protocol.startsWith("http");
+          if (isDeployed) {
+            return path;
+          }
+          const ip = localStorage.getItem("extension_server_ip");
+          if (!ip) {
+            console.error("Extension IP not found. Cannot make API call.");
+            return null;
+          }
+          return `http://${ip}:7275${path}`;
+        }
+
+        async function initialize() {
+          const profileId = localStorage.getItem("currentProfileId");
+          if (!profileId) {
+            window.location.href = "login.html";
+            return;
+          }
+          try {
+            const url = getApiUrl(`/profiles/${profileId}`);
+            if (!url) return;
+            const response = await fetch(url);
+            if (!response.ok) throw new Error("Profile not found");
+            currentProfile = await response.json();
+
+            renderSettingsForProfile();
+            setupEventListeners();
+
+            loadingScreen.style.display = "none";
+            settingsContainer.style.display = "block";
+          } catch (error) {
+            console.error("Error during initialization:", error);
+            window.parent.showToast("Failed to load profile. Please log in again.");
+          }
+        }
+
+
+
+        function renderSettingsForProfile() {
+          if (!currentProfile) return;
+          userAvatar.src = currentProfile.avatar_url;
+          usernameDisplay.textContent = currentProfile.name;
+          const { settings } = currentProfile;
+          document.body.dataset.theme = settings.theme;
+          document.getElementById("themeToggle").checked =
+            settings.theme === "light";
+          document.getElementById("pushNotificationsToggle").checked =
+            settings.pushNotifications;
+          updateDropdownSelection(settings.downloadQuality);
+        }
+
+        async function updateSetting(key, value) {
+          if (!currentProfile) return;
+          currentProfile.settings[key] = value;
+          if (key === "theme") {
+            document.body.dataset.theme = value;
+          }
+          try {
+            const url = getApiUrl(`/profiles/${currentProfile.id}`);
+            if (!url) return;
+            await fetch(url, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(currentProfile),
+            });
+          } catch (error) {
+            console.error("Failed to save settings:", error);
+            window.parent.showToast("Could not sync settings with the server.");
+          }
+        }
+
+        async function uploadAvatar(file) {
+          const formData = new FormData();
+          formData.append("avatar", file);
+          try {
+            const url = getApiUrl(`/profiles/${currentProfile.id}/avatar`);
+            if (!url) return;
+            const response = await fetch(
+              url,
+              { method: "POST", body: formData }
+            );
+            if (!response.ok) throw new Error("Avatar upload failed");
+            const updatedProfile = await response.json();
+            currentProfile.avatar_url = updatedProfile.avatar_url;
+            userAvatar.src = currentProfile.avatar_url;
+          } catch (error) {
+            console.error("Failed to upload avatar:", error);
+            window.parent.showToast("Could not upload new avatar.");
+          }
+        }
+
+        function setupEventListeners() {
+          userAvatar.addEventListener("click", () => avatarUpload.click());
+          avatarUpload.addEventListener("change", (e) => {
+            if (e.target.files && e.target.files[0])
+              uploadAvatar(e.target.files[0]);
+          });
+          switchProfileItem.addEventListener("click", () => {
+            window.parent.postMessage({ action: "switchProfile" }, "*");
+          });
+          document
+            .getElementById("themeToggle")
+            .addEventListener("change", (e) => {
+              updateSetting("theme", e.target.checked ? "light" : "dark");
+            });
+          document
+            .getElementById("pushNotificationsToggle")
+            .addEventListener("change", (e) => {
+              updateSetting("pushNotifications", e.target.checked);
+            });
+
+          setupCustomDropdown();
+          setupExtensionServerModal();
+          setupEditProfileModal();
+          setupModuleManagementModal();
+          setupAddOnManagementModal();
+          setupCacheModal();
+          setupAboutModal();
+        }
+
+        function setupAboutModal() {
+          const aboutItem = document.getElementById("aboutItem");
+          const aboutModal = document.getElementById("aboutModal");
+          const closeAboutBtn = document.getElementById("closeAboutModalBtn");
+
+          let tapCount = 0;
+          let tapTimer = null;
+          const TAP_WINDOW_MS = 500; // Window for next tap
+          const REQUIRED_TAPS = 3;
+
+          function resetTapAndOpenAbout() {
+            console.log("[About Tap] Tap window expired or sequence incomplete. Opening About modal.");
+            tapCount = 0;
+            if (tapTimer) {
+              clearTimeout(tapTimer);
+              tapTimer = null;
+            }
+            aboutModal.classList.add("active");
+          }
+
+          aboutItem.addEventListener("click", () => {
+            console.log("[About Tap] Tap detected.");
+            tapCount++;
+            console.log(`[About Tap] Current tap count: ${tapCount}/${REQUIRED_TAPS}`);
+
+            if (tapTimer) {
+              clearTimeout(tapTimer);
+            }
+
+            if (tapCount === REQUIRED_TAPS) {
+              console.log("[About Tap] Triple tap detected! Opening portal.html.");
+              tapCount = 0; // Reset for next sequence
+              tapTimer = null; // Clear timer as action is taken
+              if (window.parent && window.parent.openPopup) {
+                window.parent.openPopup("/portal.html");
+              } else {
+                console.warn("[About Tap] window.parent.openPopup is not available. Opening About modal as fallback.");
+                aboutModal.classList.add("active");
+              }
+            } else {
+              // If not enough taps yet, set a timer to reset and open About modal if no more taps
+              tapTimer = setTimeout(() => {
+                resetTapAndOpenAbout();
+              }, TAP_WINDOW_MS);
+            }
+          });
+
+          const closeAboutModal = () => aboutModal.classList.remove("active");
+          closeAboutBtn.addEventListener("click", closeAboutModal);
+          aboutModal.addEventListener("click", (e) => {
+            if (e.target === aboutModal) closeAboutModal();
+          });
+        }
+
+        // --- All other setup functions (setupCacheModal, setupCustomDropdown, etc.) remain the same ---
+        // --- They are included here for completeness but are unchanged from your last version. ---
+
+        function setupCacheModal() {
+          const modal = document.getElementById("clearCacheModal");
+          if (!modal) return;
+          const clearCacheItem = document.getElementById("clearCacheItem"),
+            clearPagesBtn = document.getElementById("clearPagesBtn"),
+            clearAllBtn = document.getElementById("clearAllBtn"),
+            closeBtn = document.getElementById("closeCacheModalBtn"),
+            closeBtnCross = document.getElementById("closeCacheModalBtnCross");
+          clearCacheItem.addEventListener("click", () => {
+            modal.classList.add("active");
+          });
+          const closeModal = () => modal.classList.remove("active");
+          closeBtn.addEventListener("click", closeModal),
+            closeBtnCross.addEventListener("click", closeModal),
+            modal.addEventListener("click", (e) => {
+              e.target === modal && closeModal();
+            }),
+            clearPagesBtn.addEventListener("click", () => {
+              confirm(
+                "This will clear cached pages and resources, forcing them to be re-downloaded. Are you sure?"
+              ) &&
+                (window.parent.postMessage({ action: "clearPageCache" }, "*"),
+                closeModal());
+            }),
+            clearAllBtn.addEventListener("click", () => {
+              confirm(
+                "WARNING: This will delete ALL site data, including your login sessions, settings, and all cached content. You will be logged out. Are you sure?"
+              ) &&
+                (window.parent.postMessage({ action: "clearAllData" }, "*"),
+                closeModal());
+            });
+        }
+        function setupCustomDropdown() {
+          const wrapper = document.getElementById("customDropdownWrapper"),
+            btn = document.getElementById("customDropdownBtn"),
+            list = document.getElementById("customDropdownList");
+          btn.addEventListener("click", (e) =>
+            wrapper.classList.toggle("is-open")
+          ),
+            list.querySelectorAll("li").forEach((opt) => {
+              opt.addEventListener("click", () => {
+                updateSetting("downloadQuality", opt.dataset.value),
+                  updateDropdownSelection(opt.dataset.value),
+                  wrapper.classList.remove("is-open");
+              });
+            }),
+            document.addEventListener("click", (e) => {
+              wrapper.contains(e.target) || wrapper.classList.remove("is-open");
+            });
+        }
+        function setupExtensionServerModal() {
+          const modal = document.getElementById("extensionServerModal"),
+            ipInput = document.getElementById("ip-input"),
+            checkBtn = document.getElementById("checkConnectionBtn"),
+            saveBtn = document.getElementById("saveConnectionBtn"),
+            closeBtn = document.getElementById("closeModalBtn"),
+            statusIndicator = document.getElementById("status-indicator");
+          extensionServerItem.addEventListener("click", () => {
+            (ipInput.value = localStorage.getItem("extension_server_ip") || ""),
+              (statusIndicator.textContent = ""),
+              (statusIndicator.className = "status-indicator"),
+              (saveBtn.disabled = !0),
+              modal.classList.add("active");
+          }),
+            closeBtn.addEventListener("click", () =>
+              modal.classList.remove("active")
+            ),
+            checkBtn.addEventListener("click", async () => {
+              const ip = ipInput.value.trim();
+              if (!ip) return;
+              (statusIndicator.textContent = "Connecting..."),
+                (statusIndicator.className = "status-indicator"),
+                (saveBtn.disabled = !0);
+              try {
+                const response = await fetch(`http://${ip}:7275/identify`, {
+                  signal: AbortSignal.timeout(5e3),
+                });
+                if (response.ok) {
+                  const data = await response.json();
+                  "Animex Extension API" === data.app
+                    ? ((statusIndicator.textContent = "Connection successful!"),
+                      (statusIndicator.className =
+                        "status-indicator connected"),
+                      localStorage.setItem("extension_server_ip", ip),
+                      (saveBtn.disabled = !1))
+                    : (() => {
+                        throw new Error("Not a valid server.");
+                      })();
+                } else throw new Error("Connection failed.");
+              } catch (error) {
+                (statusIndicator.textContent =
+                  "Connection failed. Check IP and server status."),
+                  (statusIndicator.className = "status-indicator error");
+              }
+            }),
+            saveBtn.addEventListener("click", () => {
+              modal.classList.remove("active");
+            });
+        }
+        function setupEditProfileModal() {
+          const modal = document.getElementById("editProfileModal"),
+            editUsernameBtn = document.getElementById("editUsernameBtn"),
+            usernameInput = document.getElementById("username-input"),
+            saveBtn = document.getElementById("saveUsernameBtn"),
+            closeBtn = document.getElementById("closeEditProfileModalBtn");
+          editUsernameBtn.addEventListener("click", (e) => {
+            e.preventDefault(),
+              (usernameInput.value = currentProfile.name),
+              modal.classList.add("active");
+          }),
+            closeBtn.addEventListener("click", () =>
+              modal.classList.remove("active")
+            ),
+            saveBtn.addEventListener("click", async () => {
+              const newName = usernameInput.value.trim();
+              if (newName && newName !== currentProfile.name)
+                try {
+                  const url = getApiUrl(`/profiles/${currentProfile.id}`);
+                  if (!url) return;
+                  const response = await fetch(
+                    url,
+                    {
+                      method: "PATCH",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ name: newName }),
+                    }
+                  );
+                  if (!response.ok)
+                    throw new Error("Failed to update username");
+                  const updatedProfile = await response.json();
+                  (currentProfile.name = updatedProfile.name),
+                    (usernameDisplay.textContent = currentProfile.name),
+                    modal.classList.remove("active");
+                } catch (error) {
+                  console.error("Failed to update username:", error),
+                    window.parent.showToast("Could not update username.");
+                }
+              else modal.classList.remove("active");
+            });
+        }
+        async function setupModuleManagementModal() {
+          const modal = document.getElementById("moduleManagementModal"),
+            moduleManagementItem = document.getElementById(
+              "moduleManagementItem"
+            ),
+            closeBtn = document.getElementById("closeModuleModalBtn"),
+            moduleCategoriesContainer = document.getElementById(
+              "moduleCategoriesContainer"
+            ),
+            saveModulePreferencesBtn = document.getElementById(
+              "saveModulePreferencesBtn"
+            );
+          moduleManagementItem.addEventListener("click", async () => {
+            modal.classList.add("active"), await renderModules();
+          }),
+            closeBtn.addEventListener("click", () =>
+              modal.classList.remove("active")
+            ),
+            saveModulePreferencesBtn.addEventListener("click", async () => {
+              try {
+                const url = getApiUrl(`/profiles/${currentProfile.id}/module-preferences`);
+                if (!url) return;
+                const response = await fetch(
+                  url,
+                  {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(
+                      currentProfile.settings.module_preferences
+                    ),
+                  }
+                );
+                if (!response.ok)
+                  throw new Error("Failed to save module preferences");
+                window.parent.showToast(
+                  "Module preferences saved successfully!",
+                  "success"
+                );
+              } catch (error) {
+                console.error("Error saving module preferences:", error),
+                  window.parent.showToast(
+                    "Could not save module preferences.",
+                    "error"
+                  );
+              }
+              modal.classList.remove("active");
+            });
+          async function renderModules() {
+            moduleCategoriesContainer.innerHTML = "Loading modules...";
+            try {
+              const url = getApiUrl("/modules");
+              if (!url) return;
+              const response = await fetch(url);
+              if (!response.ok) throw new Error("Failed to fetch modules");
+              const allModules = await response.json(),
+                categorizedModules = {
+                  "Anime Streaming": [],
+                  "Anime Downloading": [],
+                  Manga: [],
+                  "Hentai (Anime) Streaming": [],
+                  "Hentai (Anime) Downloading": [],
+                  "Hentai (Manga)": [],
+                  Generic: [],
+                };
+              allModules.forEach((mod) => {
+                const modTypes = [].concat(mod.type || []);
+                let categorized = !1;
+                modTypes.includes("ANIME_STREAMER") &&
+                  (mod.nsfw
+                    ? categorizedModules["Hentai (Anime) Streaming"].push(mod)
+                    : categorizedModules["Anime Streaming"].push(mod),
+                  (categorized = !0)),
+                  modTypes.includes("ANIME_DOWNLOADER") &&
+                    (mod.nsfw
+                      ? categorizedModules["Hentai (Anime) Downloading"].push(
+                          mod
+                        )
+                      : categorizedModules["Anime Downloading"].push(mod),
+                    (categorized = !0)),
+                  modTypes.includes("MANGA_READER") &&
+                    (mod.nsfw
+                      ? categorizedModules["Hentai (Manga)"].push(mod)
+                      : categorizedModules.Manga.push(mod),
+                    (categorized = !0)),
+                  categorized || categorizedModules.Generic.push(mod);
+              }),
+                (moduleCategoriesContainer.innerHTML = "");
+              for (const category in categorizedModules)
+                categorizedModules[category].length > 0 &&
+                  (() => {
+                    const preferredOrder =
+                      currentProfile.settings.module_preferences[category] ||
+                      [];
+                    categorizedModules[category].sort((a, b) => {
+                      const indexA = preferredOrder.indexOf(a.id),
+                        indexB = preferredOrder.indexOf(b.id);
+                      return -1 === indexA && -1 === indexB
+                        ? 0
+                        : -1 === indexA
+                        ? 1
+                        : -1 === indexB
+                        ? -1
+                        : indexA - indexB;
+                    });
+                    const categoryDiv = document.createElement("div");
+                    categoryDiv.classList.add("settings-group"),
+                      (categoryDiv.innerHTML = `\n  <h3 style="padding: 1rem 1.25rem; margin-bottom: 0; border-bottom: 1px solid var(--border-color);">${category}</h3>\n  <ul class="module-list" data-category-key="${category}"></ul>\n`),
+                      moduleCategoriesContainer.appendChild(categoryDiv);
+                    const moduleList =
+                      categoryDiv.querySelector(".module-list");
+                    categorizedModules[category].forEach((mod) => {
+                      const moduleItem = document.createElement("li");
+                      moduleItem.classList.add("settings-item"),
+                        (moduleItem.dataset.moduleId = mod.id),
+                        (moduleItem.innerHTML = `\n  <span class="item-text">${
+                          mod.name
+                        }</span>\n  <div class="item-action">\n    <label class="toggle-switch">\n      <input type="checkbox" data-module-id="${
+                          mod.id
+                        }" ${
+                          mod.enabled ? "checked" : ""
+                        }>\n      <span class="slider"></span>\n    </label>\n  </div>\n  <div class="module-reorder-controls">\n    <i class="fas fa-chevron-up reorder-up" data-module-id="${
+                          mod.id
+                        }"></i>\n    <i class="fas fa-chevron-down reorder-down" data-module-id="${
+                          mod.id
+                        }"></i>\n  </div>\n`),
+                        moduleList.appendChild(moduleItem);
+                      const toggle = moduleItem.querySelector(
+                        'input[type="checkbox"]'
+                      );
+                      toggle.addEventListener("change", async (e) => {
+                        const moduleId = e.target.dataset.moduleId,
+                          enable = e.target.checked;
+                        try {
+                          const url = getApiUrl(`/modules/toggle/${moduleId}/${enable}`);
+                          if (!url) return;
+                          const response = await fetch(
+                            url
+                          );
+                          if (!response.ok)
+                            throw new Error("Failed to toggle module");
+                          console.log(
+                            `Module ${moduleId} toggled to ${enable}`
+                          );
+                          const updatedModule = allModules.find(
+                            (m) => m.id === moduleId
+                          );
+                          updatedModule && (updatedModule.enabled = enable);
+                        } catch (error) {
+                          console.error(
+                            `Error toggling module ${moduleId}:`,
+                            error
+                          ),
+                            window.parent.showToast(
+                              `Could not toggle module ${moduleId}.`
+                            ),
+                            (e.target.checked = !enable);
+                        }
+                      });
+                      const reorderUp = moduleItem.querySelector(".reorder-up"),
+                        reorderDown = moduleItem.querySelector(".reorder-down");
+                      reorderUp.addEventListener("click", () =>
+                        reorderModule(mod.id, category, "up")
+                      ),
+                        reorderDown.addEventListener("click", () =>
+                          reorderModule(mod.id, category, "down")
+                        );
+                    });
+                  })();
+            } catch (error) {
+              console.error("Error fetching modules:", error),
+                (moduleCategoriesContainer.innerHTML =
+                  '<p style="color: var(--destructive);">Failed to load modules. Please check server connection.</p>');
+            }
+          }
+          function reorderModule(moduleId, category, direction) {
+            const moduleListElement = moduleCategoriesContainer.querySelector(
+              `.module-list[data-category-key="${category}"]`
+            );
+            if (!moduleListElement) return;
+            const items = Array.from(moduleListElement.children),
+              index = items.findIndex(
+                (item) => item.dataset.moduleId === moduleId
+              );
+            if (-1 === index) return;
+            let newIndex = index;
+            "up" === direction && index > 0
+              ? (newIndex = index - 1)
+              : "down" === direction && index < items.length - 1
+              ? (newIndex = index + 1)
+              : (() => {
+                  return;
+                })();
+            const [movedItem] = items.splice(index, 1);
+            items.splice(newIndex, 0, movedItem),
+              (moduleListElement.innerHTML = ""),
+              items.forEach((item) => moduleListElement.appendChild(item)),
+              (currentProfile.settings.module_preferences[category] = items.map(
+                (item) => item.dataset.moduleId
+              )),
+              console.log(
+                `Module ${moduleId} moved ${direction} in ${category}. New order:`,
+                currentProfile.settings.module_preferences[category]
+              );
+          }
+        }
+        async function setupAddOnManagementModal() {
+          const modal = document.getElementById("addOnManagementModal"),
+            addOnManagementItem = document.getElementById(
+              "addOnManagementItem"
+            ),
+            closeBtn = document.getElementById("closeAddOnModalBtn"),
+            addOnCategoriesContainer = document.getElementById(
+              "addOnCategoriesContainer"
+            ),
+            saveAddOnPreferencesBtn = document.getElementById(
+              "saveAddOnPreferencesBtn"
+            );
+          (saveAddOnPreferencesBtn.style.display = "none"),
+            addOnManagementItem.addEventListener("click", async () => {
+              modal.classList.add("active"), await renderAddOns();
+            }),
+            closeBtn.addEventListener("click", () =>
+              modal.classList.remove("active")
+            );
+          async function renderAddOns() {
+            addOnCategoriesContainer.innerHTML = "Loading add-ons...";
+            try {
+              const url = getApiUrl("/settings/add-ons");
+              if (!url) return;
+              const response = await fetch(url);
+              if (!response.ok) throw new Error("Failed to fetch add-ons");
+              const allAddOnsSettings = await response.json();
+              if (
+                ((addOnCategoriesContainer.innerHTML = ""),
+                0 === allAddOnsSettings.length)
+              )
+                return void (addOnCategoriesContainer.innerHTML =
+                  "<p>No add-ons with settings found.</p>");
+              const groupedSettings = allAddOnsSettings.reduce(
+                (acc, setting) => {
+                  const extId = setting.extension_id;
+                  return (
+                    acc[extId] || (acc[extId] = { title: extId, settings: [] }),
+                    acc[extId].settings.push(setting),
+                    acc
+                  );
+                },
+                {}
+              );
+              for (const extensionId in groupedSettings) {
+                const { title: title, settings: settings } =
+                    groupedSettings[extensionId],
+                  addOnGroupDiv = document.createElement("div");
+                addOnGroupDiv.classList.add("settings-group");
+                const settingsList = document.createElement("div");
+                settingsList.classList.add("add-on-settings-list"),
+                  settings.forEach((setting) => {
+                    const settingItem = document.createElement("div");
+                    settingItem.classList.add("settings-item"),
+                      (settingItem.innerHTML = `\n                      <i class="item-icon ${
+                        setting.icon || "fas fa-cog"
+                      }"></i>\n                      <span class="item-text">${
+                        setting.text
+                      }</span>\n                      <div class="item-action">\n                          <label class="toggle-switch">\n                              <input type="checkbox" id="addon-${extensionId}-${
+                        setting.id
+                      }" data-setting-id="${
+                        setting.id
+                      }">\n                              <span class="slider"></span>\n                          </label>\n                  </div>\n                  `),
+                      settingsList.appendChild(settingItem);
+                  }),
+                  (addOnGroupDiv.innerHTML = `<h3 style="padding: 1rem 1.25rem; margin-bottom: 0; border-bottom: 1px solid var(--border-color);">${title}</h3>`),
+                  addOnGroupDiv.appendChild(settingsList),
+                  addOnCategoriesContainer.appendChild(addOnGroupDiv),
+                  settings.forEach((setting) => {
+                    const toggle = document.getElementById(
+                      `addon-${extensionId}-${setting.id}`
+                    );
+                    toggle &&
+                      (currentProfile &&
+                        currentProfile.settings &&
+                        (toggle.checked =
+                          !!currentProfile.settings[setting.id]),
+                      toggle.addEventListener("change", (e) => {
+                        const settingId = e.target.dataset.settingId,
+                          isChecked = e.target.checked;
+                        updateSetting(settingId, isChecked);
+                      }));
+                  });
+              }
+            } catch (error) {
+              console.error("Error fetching add-ons:", error),
+                (addOnCategoriesContainer.innerHTML =
+                  '<p style="color: var(--destructive);">Failed to load add-ons. Please check server connection.</p>');
+            }
+          }
+        }
+        function updateDropdownSelection(value) {
+          const list = document.getElementById("customDropdownList"),
+            selectedSpan = document.getElementById("customDropdownSelected");
+          let found = !1;
+          list.querySelectorAll("li").forEach((opt) => {
+            const isSelected = opt.dataset.value === value;
+            opt.classList.toggle("selected", isSelected),
+              isSelected &&
+                ((selectedSpan.textContent = opt.textContent), (found = !0));
+          }),
+            found ||
+              (() => {
+                const firstOpt = list.querySelector("li");
+                firstOpt &&
+                  (firstOpt.classList.add("selected"),
+                  (selectedSpan.textContent = firstOpt.textContent));
+              })();
+        }
+
+        initialize();
+      });
+    </script>
+  </body>
+</html>

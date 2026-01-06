@@ -1,0 +1,520 @@
+{
+    "spotlight": [
+        {
+            "id": 113138,
+            "name": "Jujutsu Kaisen",
+            "image": "https://cdn.myanimelist.net/images/manga/3/210341l.jpg",
+            "description": "Hidden in plain sight, an age-old conflict rages on. Supernatural monsters known as Curses terrorize humanity from the shadows, and powerful humans known as Jujutsu sorcerers use mystical arts to exterminate them. When high school student Yuuji Itadori finds a dried-up finger of the legendary Curse Sukuna Ryoumen, he suddenly finds himself joining this bloody conflict.\n\nAttacked by a Curse attracted to the finger's power, Yuuji makes a reckless decision to protect himself, gaining the power to combat Curses in the process but also unwittingly unleashing the malicious Sukuna into the world once more. Though Yuuji can control and confine Sukuna to his own body, the Jujutsu world classifies Yuuji as a dangerous, high-level Curse who must be exterminated.\n\nDetained and sentenced to death, Yuuji meets Satoru Gojou\u2014a teacher at Jujutsu High School\u2014who explains that despite his imminent execution, there is an alternative for him. Being a rare vessel to Sukuna, if Yuuji were to die, then Sukuna would perish too. Therefore, if Yuuji were to consume the many other remnants of Sukuna, then Yuuji's subsequent execution would truly eradicate the malicious demon. Taking up this chance to make the world safer and live his life for a little longer, Yuuji enrolls in Tokyo Prefectural Jujutsu High School, jumping headfirst into a harsh and unforgiving battlefield.\n\n[Written by MAL Rewrite]",
+            "year": 2018,
+            "jp_name": "呪術廻戦"
+        },
+        {
+            "id": 2,
+            "name": "Berserk",
+            "image": "https://cdn.myanimelist.net/images/manga/1/157897l.jpg",
+            "description": "Guts, a former mercenary now known as the Black Swordsman, is out for revenge. After a tumultuous childhood, he finally finds someone he respects and believes he can trust, only to have everything fall apart when this person takes away everything important to Guts for the purpose of fulfilling his own desires. Now marked for death, Guts becomes condemned to a fate in which he is relentlessly pursued by demonic beings.\n\nSetting out on a dreadful quest riddled with misfortune, Guts, armed with a massive sword and monstrous strength, will let nothing stop him, not even death itself, until he is finally able to take the head of the one who stripped him\u2014and his loved one\u2014of their humanity.\n\n[Written by MAL Rewrite]\n\nIncluded one-shot:\nVolume 14: Berserk: The Prototype",
+            "year": 1989,
+            "jp_name": "ベルセルク"
+        },
+        {
+            "id": 13,
+            "name": "One Piece",
+            "image": "https://cdn.myanimelist.net/images/manga/2/253146l.jpg",
+            "description": "Gol D. Roger, a man referred to as the King of the Pirates, is set to be executed by the World Government. But just before his demise, he confirms the existence of a great treasure, One Piece, located somewhere within the vast ocean known as the Grand Line. Announcing that One Piece can be claimed by anyone worthy enough to reach it, the King of the Pirates is executed and the Great Age of Pirates begins.\n\nTwenty-two years later, a young man by the name of Monkey D. Luffy is ready to embark on his own adventure, searching for One Piece and striving to become the new King of the Pirates. Armed with just a straw hat, a small boat, and an elastic body, he sets out on a fantastic journey to gather his own crew and a worthy ship that will take them across the Grand Line to claim the greatest status on the high seas.\n\n[Written by MAL Rewrite]",
+            "year": 1997,
+            "jp_name": "ワンピース"
+        },
+        {
+            "id": 96792,
+            "name": "Demon Slayer: Kimetsu no Yaiba",
+            "image": "https://cdn.myanimelist.net/images/manga/3/179023l.jpg",
+            "description": "Tanjirou Kamado lives with his impoverished family on a remote mountain. As the oldest sibling, he took upon the responsibility of ensuring his family's livelihood after the death of his father. On a cold winter day, he goes down to the local village in order to sell some charcoal. As dusk falls, he is forced to spend the night in the house of a curious man who cautions him of strange creatures that roam the night: malevolent demons who crave human flesh.\n\nWhen he finally makes his way home, Tanjirou's worst nightmare comes true. His entire family has been brutally slaughtered with the sole exception of his sister Nezuko, who has turned into a flesh-eating demon. Engulfed in hatred and despair, Tanjirou desperately tries to stop Nezuko from attacking other people, setting out on a journey to avenge his family and find a way to turn his beloved sister back into a human.\n\n[Written by MAL Rewrite]",
+            "year": 2016,
+            "jp_name": "鬼滅の刃"
+        },
+        {
+            "id": 23390,
+            "name": "Attack on Titan",
+            "image": "https://cdn.myanimelist.net/images/manga/2/37846l.jpg",
+            "description": "Hundreds of years ago, horrifying creatures which resembled humans appeared. These mindless, towering giants, called Titans, proved to be an existential threat, as they preyed on whatever humans they could find in order to satisfy a seemingly unending appetite. Unable to effectively combat the Titans, mankind was forced to barricade themselves within large walls surrounding what may very well be humanity's last safe haven in the world.\n\nIn the present day, life within the walls has finally found peace, since the residents have not dealt with Titans for many years. Eren Yeager, Mikasa Ackerman, and Armin Arlert are three young children who dream of experiencing all that the world has to offer, having grown up hearing stories of the wonders beyond the walls. But when the state of tranquility is suddenly shattered by the attack of a massive 60-meter Titan, they quickly learn just how cruel the world can be. On that day, Eren makes a promise to himself that he will do whatever it takes to eradicate every single Titan off the face of the Earth, with the hope that one day, humanity will once again be able to live outside the walls without fear.\n\n[Written by MAL Rewrite]",
+            "year": 2009,
+            "jp_name": "進撃の巨人"
+        },
+        {
+            "id": 116778,
+            "name": "Chainsaw Man",
+            "image": "https://cdn.myanimelist.net/images/manga/3/216464l.jpg",
+            "description": "Denji has a simple dream\u2014to live a happy and peaceful life, spending time with a girl he likes. This is a far cry from reality, however, as Denji is forced by the yakuza into killing devils in order to pay off his crushing debts. Using his pet devil Pochita as a weapon, he is ready to do anything for a bit of cash.\n\nUnfortunately, he has outlived his usefulness and is murdered by a devil in contract with the yakuza. However, in an unexpected turn of events, Pochita merges with Denji's dead body and grants him the powers of a chainsaw devil. Now able to transform parts of his body into chainsaws, a revived Denji uses his new abilities to quickly and brutally dispatch his enemies. Catching the eye of the official devil hunters who arrive at the scene, he is offered work at the Public Safety Bureau as one of them. Now with the means to face even the toughest of enemies, Denji will stop at nothing to achieve his simple teenage dreams.\n\n[Written by MAL Rewrite]",
+            "year": 2018,
+            "jp_name": "チェンソーマン"
+        },
+        {
+            "id": 121496,
+            "name": "Solo Leveling",
+            "image": "https://cdn.myanimelist.net/images/manga/3/222295l.jpg",
+            "description": "Ten years ago, \"the Gate\" appeared and connected the real world with the realm of magic and monsters. To combat these vile beasts, ordinary people received superhuman powers and became known as \"Hunters.\" Twenty-year-old Sung Jin-Woo is one such Hunter, but he is known as the \"World's Weakest,\" owing to his pathetic power compared to even a measly E-Rank. Still, he hunts monsters tirelessly in low-rank Gates to pay for his mother's medical bills. \n\nHowever, this miserable lifestyle changes when Jin-Woo\u2014believing himself to be the only one left to die in a mission gone terribly wrong\u2014awakens in a hospital three days later to find a mysterious screen floating in front of him. This \"Quest Log\" demands that Jin-Woo completes an unrealistic and intense training program, or face an appropriate penalty. Initially reluctant to comply because of the quest's rigor, Jin-Woo soon finds that it may just transform him into one of the world's most fearsome Hunters. \n\n[Written by MAL Rewrite]",
+            "year": 2018,
+            "jp_name": "ソロレベル"
+        },
+        {
+            "id": 642,
+            "name": "Vinland Saga",
+            "image": "https://cdn.myanimelist.net/images/manga/2/188925l.jpg",
+            "description": "Thorfinn, son of one of the Vikings' greatest warriors, is among the finest fighters in the merry band of mercenaries run by the cunning Askeladd, an impressive feat for a person his age. However, Thorfinn is not part of the group for the plunder it entails\u2014instead, for having caused his family great tragedy, the boy has vowed to kill Askeladd in a fair duel. Not yet skilled enough to defeat him, but unable to abandon his vengeance, Thorfinn spends his boyhood with the mercenary crew, honing his skills on the battlefield among the war-loving Danes, where killing is just another pleasure of life.\n\nOne day, when Askeladd receives word that Danish prince Canute has been taken hostage, he hatches an ambitious plot\u2014one that will decide the next King of England and drastically alter the lives of Thorfinn, Canute, and himself. Set in 11th-century Europe, Vinland Saga tells a bloody epic in an era where violence, madness, and injustice are inescapable, providing a paradise for the battle-crazed and utter hell for the rest who live in it.\n\n[Written by MAL Rewrite]\n\nIncluded one-shots:\nVolume 23: Sayounara ga Chikai node (For Our Farewell Is Near)\nVolume 25: \"Assassin's Creed Valhalla\" Collab Bangai-hen (Assassin's Creed x Vinland Saga)",
+            "year": 2005,
+            "jp_name": "ヴィンランド・サガ"
+        }
+    ],
+    "sections": [
+        {
+            "title": "Fan Favorites",
+            "items": [
+                {
+                    "id": 25,
+                    "name": "Fullmetal Alchemist",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/243675l.jpg"
+                },
+                {
+                    "id": 1,
+                    "name": "Monster",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/258224l.jpg"
+                },
+                {
+                    "id": 656,
+                    "name": "Vagabond",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/259070l.jpg"
+                },
+                {
+                    "id": 90125,
+                    "name": "Kaguya-sama: Love Is War",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/188896l.jpg"
+                },
+                {
+                    "id": 21,
+                    "name": "Death Note",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/258245l.jpg"
+                },
+                {
+                    "id": 44489,
+                    "name": "Land of the Lustrous",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/115443l.jpg"
+                },
+                {
+                    "id": 26,
+                    "name": "Hunter x Hunter",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/253119l.jpg"
+                },
+                {
+                    "id": 657,
+                    "name": "Real",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/115969l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Trending Now",
+            "items": [
+                {
+                    "id": 126146,
+                    "name": "[Oshi no Ko]",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/233991l.jpg"
+                },
+                {
+                    "id": 119161,
+                    "name": "Spy x Family",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/219741l.jpg"
+                },
+                {
+                    "id": 113138,
+                    "name": "Jujutsu Kaisen",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/210341l.jpg"
+                },
+                {
+                    "id": 118855,
+                    "name": "That Summer",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/228279l.jpg"
+                },
+                {
+                    "id": 133800,
+                    "name": "Kedamono-tachi no Jikan: Kyouizon Shoukougun",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/249520l.jpg"
+                },
+                {
+                    "id": 114755,
+                    "name": "Change the World: Bloodthirsty Killer from Today",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/219770l.jpg"
+                },
+                {
+                    "id": 127907,
+                    "name": "Kaiju No. 8",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/252929l.jpg"
+                },
+                {
+                    "id": 129868,
+                    "name": "Tsuyuno-chan Likes to Show Off",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/234412l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Action-Packed Adventures",
+            "items": [
+                {
+                    "id": 11,
+                    "name": "Naruto",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/249658l.jpg"
+                },
+                {
+                    "id": 12,
+                    "name": "Bleach",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/180031l.jpg"
+                },
+                {
+                    "id": 42,
+                    "name": "Dragon Ball",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/267793l.jpg"
+                },
+                {
+                    "id": 86337,
+                    "name": "Black Clover",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/166254l.jpg"
+                },
+                {
+                    "id": 75989,
+                    "name": "My Hero Academia",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/209370l.jpg"
+                },
+                {
+                    "id": 31499,
+                    "name": "Nisekoi: False Love",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/181212l.jpg"
+                },
+                {
+                    "id": 100128,
+                    "name": "The Promised Neverland",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/186922l.jpg"
+                },
+                {
+                    "id": 4,
+                    "name": "Yokohama Kaidashi Kikou",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/171813l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Dark & Gritty",
+            "items": [
+                {
+                    "id": 642,
+                    "name": "Vinland Saga",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/188925l.jpg"
+                },
+                {
+                    "id": 4632,
+                    "name": "Goodnight Punpun",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/266834l.jpg"
+                },
+                {
+                    "id": 33327,
+                    "name": "Tokyo Ghoul",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/114037l.jpg"
+                },
+                {
+                    "id": 100448,
+                    "name": "I sold my life for ten thousand yen per year.",
+                    "image": "https://cdn.myanimelist.net/images/manga/5/260043l.jpg"
+                },
+                {
+                    "id": 3006,
+                    "name": "JoJo's Bizarre Adventure Part 4: Diamond Is Unbreakable",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/269910l.jpg"
+                },
+                {
+                    "id": 651,
+                    "name": "Blade of the Immortal",
+                    "image": "https://media.kitsu.app/manga/poster_images/1487/large.jpg"
+                },
+                {
+                    "id": 104314,
+                    "name": "Jagaaaaaan",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/273180l.jpg"
+                },
+                {
+                    "id": 1706,
+                    "name": "JoJo's Bizarre Adventure Part 7: Steel Ball Run",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/179882l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Otherworldly Fantasies",
+            "items": [
+                {
+                    "id": 70259,
+                    "name": "Mushoku Tensei: Jobless Reincarnation",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/181049l.jpg"
+                },
+                {
+                    "id": 126287,
+                    "name": "Frieren: Beyond Journey's End",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/232121l.jpg"
+                },
+                {
+                    "id": 89554,
+                    "name": "That Time I Got Reincarnated as a Slime",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/157796l.jpg"
+                },
+                {
+                    "id": 110485,
+                    "name": "Record of Ragnarok",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/209957l.jpg"
+                },
+                {
+                    "id": 85737,
+                    "name": "Sensei no Sumika",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/148845l.jpg"
+                },
+                {
+                    "id": 118586,
+                    "name": "Sousei no Onmyouji: Tenen Jakko - Nishoku Kokkeiga",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/232292l.jpg"
+                },
+                {
+                    "id": 98436,
+                    "name": "The Saga of Tanya the Evil",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/186468l.jpg"
+                },
+                {
+                    "id": 44347,
+                    "name": "One-Punch Man",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/80661l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Heartwarming & Wholesome",
+            "items": [
+                {
+                    "id": 104,
+                    "name": "Yotsuba&!",
+                    "image": "https://cdn.myanimelist.net/images/manga/5/259524l.jpg"
+                },
+                {
+                    "id": 13245,
+                    "name": "Chihayafuru",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/245072l.jpg"
+                },
+                {
+                    "id": 42451,
+                    "name": "Horimiya",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/245008l.jpg"
+                },
+                {
+                    "id": 35507,
+                    "name": "Arcana Famiglia: Amore Mangiare Cantare!",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/81392l.jpg"
+                },
+                {
+                    "id": 85802,
+                    "name": "The boy who cried wolf tells a lie today also",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/148976l.jpg"
+                },
+                {
+                    "id": 99007,
+                    "name": "Komi Can't Communicate",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/188962l.jpg"
+                },
+                {
+                    "id": 117060,
+                    "name": "My Dress-Up Darling",
+                    "image": "https://media.kitsu.app/manga/poster_images/41006/large.jpg"
+                },
+                {
+                    "id": 96573,
+                    "name": "Something About Us",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/189603l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Love is in the Air",
+            "items": [
+                {
+                    "id": 103851,
+                    "name": "The Quintessential Quintuplets",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/201572l.jpg"
+                },
+                {
+                    "id": 116539,
+                    "name": "Destroy All Humans. They Can't Be Regenerated.",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/220187l.jpg"
+                },
+                {
+                    "id": 14455,
+                    "name": "Little Butterfly: Gush Limited",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/20679l.jpg"
+                },
+                {
+                    "id": 128594,
+                    "name": "One Piece: Ace's Story",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/266074l.jpg"
+                },
+                {
+                    "id": 109229,
+                    "name": "Yakuza Fianc\u00e9: Raise wa Tanin ga Ii",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/203176l.jpg"
+                },
+                {
+                    "id": 56805,
+                    "name": "A Silent Voice",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/120529l.jpg"
+                },
+                {
+                    "id": 70851,
+                    "name": "Futanari Musume ni Okasarechau!",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/121643l.jpg"
+                },
+                {
+                    "id": 13,
+                    "name": "One Piece",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/253146l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Manhwa Masterpieces",
+            "items": [
+                {
+                    "id": 121496,
+                    "name": "Solo Leveling",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/222295l.jpg"
+                },
+                {
+                    "id": 122663,
+                    "name": "Tower of God",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/223694l.jpg"
+                },
+                {
+                    "id": 8586,
+                    "name": "The Breaker",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/270151l.jpg"
+                },
+                {
+                    "id": 111213,
+                    "name": "Bastard",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/205549l.jpg"
+                },
+                {
+                    "id": 125036,
+                    "name": "The Horizon",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/229331l.jpg"
+                },
+                {
+                    "id": 121948,
+                    "name": "Can I Have You All to Myself?",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/235219l.jpg"
+                },
+                {
+                    "id": 110938,
+                    "name": "Hoshi no Koe: The Voices of a Distant Star",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/240830l.jpg"
+                },
+                {
+                    "id": 116966,
+                    "name": "Hidoku Shinaide dj - Akakute Oishii",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/305350l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "Mind Games & Mysteries",
+            "items": [
+                {
+                    "id": 3,
+                    "name": "20th Century Boys",
+                    "image": "https://cdn.myanimelist.net/images/manga/5/260006l.jpg"
+                },
+                {
+                    "id": 7458,
+                    "name": "Death Note Another Note: The Los Angeles BB Murder Cases",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/253578l.jpg"
+                },
+                {
+                    "id": 10010,
+                    "name": "Beelzebub",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/188942l.jpg"
+                },
+                {
+                    "id": 108639,
+                    "name": "Tsuiraku JK to Haijin Kyoushi",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/301288l.jpg"
+                },
+                {
+                    "id": 393,
+                    "name": "The Kindaichi Case Files",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/84823l.jpg"
+                },
+                {
+                    "id": 139158,
+                    "name": "Tomodachi Game",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/261962l.jpg"
+                },
+                {
+                    "id": 13601,
+                    "name": "Be Free!",
+                    "image": "https://cdn.myanimelist.net/images/manga/4/76293l.jpg"
+                },
+                {
+                    "id": 3573,
+                    "name": "Tobaku Hakairoku Kaiji",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/302202l.jpg"
+                }
+            ]
+        },
+        {
+            "title": "School Life & Sports",
+            "items": [
+                {
+                    "id": 35243,
+                    "name": "Haikyu!!",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/258225l.jpg"
+                },
+                {
+                    "id": 30,
+                    "name": "Ouran High School Host Club",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/267782l.jpg"
+                },
+                {
+                    "id": 107931,
+                    "name": "Blue Period",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/204827l.jpg"
+                },
+                {
+                    "id": 150863,
+                    "name": "Windbreak Samurai",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/296855l.jpg"
+                },
+                {
+                    "id": 418,
+                    "name": "Mushishi",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/159514l.jpg"
+                },
+                {
+                    "id": 1061,
+                    "name": "Case Closed",
+                    "image": "https://cdn.myanimelist.net/images/manga/1/97267l.jpg"
+                },
+                {
+                    "id": 11211,
+                    "name": "Tenshi no Tame no Shohousen.",
+                    "image": "https://cdn.myanimelist.net/images/manga/3/275687l.jpg"
+                },
+                {
+                    "id": 78523,
+                    "name": "ReLIFE",
+                    "image": "https://cdn.myanimelist.net/images/manga/2/171573l.jpg"
+                }
+            ]
+        }
+    ]
+}

@@ -20,14 +20,16 @@ from fastapi import FastAPI, HTTPException, Query, Body, status, UploadFile, Fil
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
-from typing import List, Dict, Any, Optional
+from typing import Any, Dict, List, Optional, Tuple
+from dataclasses import dataclass, asdict
+from functools import wraps
+import time
 from pydantic import BaseModel, Field
 import httpx
 import io
 from fastapi.responses import StreamingResponse, JSONResponse, Response
 from zeroconf import ServiceInfo, Zeroconf
 from fpdf import FPDF
-from curl_cffi.requests import AsyncSession
 
 # --- Global Event for Animation Control ---
 server_ready_event = threading.Event()
@@ -78,7 +80,7 @@ def register_service():
         port = 7275
         service_info = ServiceInfo(
             "_http._tcp.local.",
-            f"Animex @ {host_name}._http._tcp.local.",
+            f"Animex Extension API @ {host_name}._http._tcp.local.",
             addresses=[socket.inet_aton(host_ip)],
             port=port,
             properties={'app': 'animex-extension-api'},
@@ -163,6 +165,448 @@ def save_cache(url: str, payload: dict):
             json.dump(cache_obj, f)
     except Exception as e:
         print(f"Failed to save cache: {e}")
+        
+ANILIST_URL = "https://graphql.anilist.co"
+JIKAN_RELATIONS = "https://api.jikan.moe/v4/anime/{mal_id}/relations"
+
+# GraphQL that accepts either idMal or id (AniList id)
+MEDIA_QUERY = """
+query ($idMal: Int, $id: Int) {
+  Media(idMal: $idMal, id: $id, type: ANIME) {
+    id
+    idMal
+    title { romaji english native }
+    format
+    episodes
+    season
+    seasonYear
+    startDate { year month day }
+    relations {
+      edges {
+        relationType
+        node {
+          id
+          idMal
+          title { romaji english native }
+          format
+          season
+          seasonYear
+          startDate { year month day }
+        }
+      }
+    }
+  }
+}
+"""
+
+
+
+TRAVERSE_RELATIONS = {"SEQUEL", "PREQUEL", "PARENT", "CHILD"}
+SEASON_FORMATS = {"TV", "TV_SHORT"}
+
+# regexes for parts & final detection
+PART_RE = re.compile(r'\b(?:part|pt|p|section)\s*[:.]?\s*([0-9]+|[ivx]+)\b', re.I)
+SEASON_RE = re.compile(r'\b(?:season|s)\s*[:.]?\s*([0-9]+|[ivx]+)\b', re.I)
+COUR_RE = re.compile(r'\b(?:cour)\s*[:.]?\s*([0-9]+)\b', re.I)
+FINAL_RE = re.compile(r'\b(final season|final chapters?|finale)\b', re.I)
+
+ROMAN_MAP = {'I':1,'V':5,'X':10,'L':50,'C':100,'D':500,'M':1000}
+
+def roman_to_int(s: str) -> Optional[int]:
+    if not s:
+        return None
+    s = s.upper().strip()
+    total = 0
+    prev = 0
+    for ch in s[::-1]:
+        val = ROMAN_MAP.get(ch)
+        if val is None:
+            return None
+        if val < prev:
+            total -= val
+        else:
+            total += val
+        prev = val
+    return total if total > 0 else None
+
+def extract_part_from_title(title: str) -> Optional[int]:
+    if not title:
+        return None
+    m = SEASON_RE.search(title)
+    if m:
+        raw = m.group(1)
+        try:
+            return int(raw)
+        except ValueError:
+            return roman_to_int(raw)
+    m = PART_RE.search(title)
+    if m:
+        raw = m.group(1)
+        try:
+            return int(raw)
+        except ValueError:
+            return roman_to_int(raw)
+    m = COUR_RE.search(title)
+    if m:
+        try:
+            return int(m.group(1))
+        except Exception:
+            return None
+    return None
+
+def detect_final_in_title(title: str) -> bool:
+    return bool(title and FINAL_RE.search(title))
+
+def safe_date_tuple(sd: Dict[str, Any]) -> Tuple[int,int,int]:
+    if not sd:
+        return (0,0,0)
+    return (sd.get("year") or 0, sd.get("month") or 0, sd.get("day") or 0)
+
+@dataclass
+class MediaEntry:
+    anilist_id: int
+    mal_id: Optional[int]
+    title_romaji: str
+    title_english: Optional[str]
+    title_native: Optional[str]
+    format: Optional[str]
+    start_date: Dict[str, Optional[int]]
+    season: Optional[str]
+    season_year: Optional[int]
+    episodes: Optional[int]
+    relation_type_from_parent: Optional[str] = None
+    inferred_part: Optional[int] = None
+    is_season: bool = False
+    is_final_from_title: bool = False
+
+    def title_display(self) -> str:
+        return (self.title_english or self.title_romaji or self.title_native or "")
+
+    def to_dict(self) -> Dict[str, Any]:
+        d = asdict(self)
+        d["title_display"] = self.title_display()
+        d["_start_tuple"] = safe_date_tuple(self.start_date)
+        d["is_final_season"] = self.is_final_from_title
+        return d
+
+
+# Simple in-memory cache for AniList responses (per-process). Key -> (timestamp, value)
+_ANILIST_CACHE: Dict[str, Tuple[float, Optional[Dict[str, Any]]]] = {}
+_ANILIST_CACHE_TTL = 60 * 60  # 1 hour
+
+
+def anilist_cache_get(key: str) -> Optional[Dict[str, Any]]:
+    rec = _ANILIST_CACHE.get(key)
+    if not rec:
+        return None
+    ts, val = rec
+    if time.time() - ts > _ANILIST_CACHE_TTL:
+        del _ANILIST_CACHE[key]
+        return None
+    return val
+
+def anilist_cache_set(key: str, value: Optional[Dict[str, Any]]):
+    _ANILIST_CACHE[key] = (time.time(), value)
+
+
+async def fetch_media(client: httpx.AsyncClient, mal_id: Optional[int]=None, aid: Optional[int]=None) -> Optional[Dict[str,Any]]:
+    """
+    Fetch media node from AniList by MAL id or AniList id. Uses small cache.
+    """
+    if mal_id:
+        cache_key = f"mal:{mal_id}"
+    elif aid:
+        cache_key = f"aid:{aid}"
+    else:
+        return None
+
+    cached = anilist_cache_get(cache_key)
+    if cached is not None:
+        return cached
+
+    variables = {}
+    if mal_id:
+        variables["idMal"] = mal_id
+    if aid:
+        variables["id"] = aid
+
+    try:
+        r = await client.post(ANILIST_URL, json={"query": MEDIA_QUERY, "variables": variables}, timeout=15.0)
+        r.raise_for_status()
+        payload = r.json()
+        media = payload.get("data", {}).get("Media")
+        anilist_cache_set(cache_key, media)
+        # be polite
+        await asyncio.sleep(0.03)
+        return media
+    except Exception:
+        anilist_cache_set(cache_key, None)
+        return None
+
+async def fetch_jikan_relations(client: httpx.AsyncClient, mal_id: int) -> List[Dict[str, Any]]:
+    try:
+        r = await client.get(JIKAN_RELATIONS.format(mal_id=mal_id), timeout=12.0)
+        if r.status_code != 200:
+            return []
+        js = r.json()
+        entries = []
+        for rel in js.get("data", []):
+            rel_type = rel.get("relation")
+            for entry in rel.get("entry", []):
+                if entry.get("type") != "anime":
+                    continue
+                entries.append({
+                    "mal_id": entry.get("mal_id"),
+                    "title": entry.get("name"),
+                    "relation": rel_type
+                })
+        return entries
+    except Exception:
+        return []
+
+
+async def collect_franchise(client: httpx.AsyncClient, root_mal: int, max_visits: int = 1000) -> List[MediaEntry]:
+    """
+    Walk the franchise starting from root_mal using AniList relations (recursive),
+    with fallback to Jikan relations if AniList misses edges.
+    Returns a list of MediaEntry objects (unsorted).
+    """
+    seen_aid = set()
+    results_by_key: Dict[str, MediaEntry] = {}
+    stack = [("mal", root_mal)]
+    visits = 0
+
+    while stack and visits < max_visits:
+        visits += 1
+        kind, val = stack.pop()
+        if kind == "mal":
+            media = await fetch_media(client, mal_id=val)
+        else:
+            media = await fetch_media(client, aid=val)
+
+        if not media:
+            # if AniList failed to find the node, skip
+            continue
+
+        aid = media.get("id")
+        if aid in seen_aid:
+            continue
+        seen_aid.add(aid)
+
+        # build entry
+        tid = media.get("title") or {}
+        romaji = tid.get("romaji") or ""
+        english = tid.get("english")
+        native = tid.get("native")
+        title_for_parsing = english or romaji or native or ""
+        entry = MediaEntry(
+            anilist_id=media.get("id"),
+            mal_id=media.get("idMal"),
+            title_romaji=romaji,
+            title_english=english,
+            title_native=native,
+            format=media.get("format"),
+            start_date=media.get("startDate") or {"year": None, "month": None, "day": None},
+            season=media.get("season"),
+            season_year=media.get("seasonYear"),
+            episodes=media.get("episodes"),
+            relation_type_from_parent=None,
+            inferred_part=extract_part_from_title(title_for_parsing),
+            is_season=(media.get("format") in SEASON_FORMATS),
+            is_final_from_title=detect_final_in_title(title_for_parsing)
+        )
+        results_by_key[f"aid_{aid}"] = entry
+
+        # iterate relations
+        rels = (media.get("relations") or {}).get("edges", []) or []
+        if not rels:
+            # fall back to Jikan relations for this MAL id if present
+            if media.get("idMal"):
+                jikan_entries = await fetch_jikan_relations(client, media.get("idMal"))
+                for je in jikan_entries:
+                    node_mal = je.get("mal_id")
+                    if not node_mal:
+                        continue
+                    # push to stack to fetch full node
+                    stack.append(("mal", node_mal))
+        else:
+            for edge in rels:
+                rtype = edge.get("relationType")
+                node = edge.get("node") or {}
+                if rtype not in TRAVERSE_RELATIONS:
+                    continue
+                node_mal = node.get("idMal")
+                node_aid = node.get("id")
+                # store lite node (fill more when fetched)
+                tid2 = node.get("title") or {}
+                romaji2 = tid2.get("romaji") or ""
+                english2 = tid2.get("english")
+                native2 = tid2.get("native")
+                title_for_parsing2 = english2 or romaji2 or native2 or ""
+                lite = MediaEntry(
+                    anilist_id=node_aid or -1,
+                    mal_id=node_mal,
+                    title_romaji=romaji2,
+                    title_english=english2,
+                    title_native=native2,
+                    format=node.get("format"),
+                    start_date=node.get("startDate") or {"year": None, "month": None, "day": None},
+                    season=node.get("season"),
+                    season_year=node.get("seasonYear"),
+                    episodes=node.get("episodes"),
+                    relation_type_from_parent=rtype,
+                    inferred_part=extract_part_from_title(title_for_parsing2),
+                    is_season=(node.get("format") in SEASON_FORMATS),
+                    is_final_from_title=detect_final_in_title(title_for_parsing2)
+                )
+                key = f"aid_{node_aid}" if node_aid else f"mal_{node_mal if node_mal else 'unknown'}"
+                if key not in results_by_key:
+                    results_by_key[key] = lite
+
+                # prefer to fetch full via MAL id if available
+                if node_mal:
+                    stack.append(("mal", node_mal))
+                elif node_aid:
+                    stack.append(("aid", node_aid))
+
+    # Attempt to upgrade lite entries (where format was None) by fetching their full node (if we have MAL id)
+    upgrade_keys = []
+    for k, ent in list(results_by_key.items()):
+        if (ent.format is None or ent.title_english is None) and ent.mal_id:
+            upgrade_keys.append((k, ent.mal_id))
+    for k, mid in upgrade_keys:
+        full = await fetch_media(client, mal_id=mid)
+        if full:
+            tid = full.get("title") or {}
+            romaji = tid.get("romaji") or ""
+            english = tid.get("english")
+            native = tid.get("native")
+            full_entry = MediaEntry(
+                anilist_id=full.get("id"),
+                mal_id=full.get("idMal"),
+                title_romaji=romaji,
+                title_english=english,
+                title_native=native,
+                format=full.get("format"),
+                start_date=full.get("startDate") or {"year": None, "month": None, "day": None},
+                season=full.get("season"),
+                season_year=full.get("seasonYear"),
+                episodes=full.get("episodes"),
+                relation_type_from_parent=results_by_key[k].relation_type_from_parent,
+                inferred_part=extract_part_from_title(english or romaji or native or ""),
+                is_season=(full.get("format") in SEASON_FORMATS),
+                is_final_from_title=detect_final_in_title(english or romaji or native or "")
+            )
+            # replace keys keyed by aid_ if available
+            results_by_key[f"aid_{full_entry.anilist_id}"] = full_entry
+            if k in results_by_key:
+                del results_by_key[k]
+
+    # Convert to list and dedupe by mal_id where possible
+    all_entries = list(results_by_key.values())
+    deduped: Dict[Any, MediaEntry] = {}
+    for e in all_entries:
+        key = e.mal_id if e.mal_id is not None else f"aid_{e.anilist_id}"
+        existing = deduped.get(key)
+        if not existing:
+            deduped[key] = e
+        else:
+            # prefer one with format or known date
+            if (existing.format is None and e.format is not None) or (safe_date_tuple(existing.start_date) == (0,0,0) and safe_date_tuple(e.start_date) != (0,0,0)):
+                deduped[key] = e
+
+    items = list(deduped.values())
+
+    # final sort by start date
+    items.sort(key=lambda x: safe_date_tuple(x.start_date))
+    return items
+
+
+def produce_season_labeling(entries: List[MediaEntry]) -> Dict[str, Any]:
+    # seasons and extras
+    seasons = [e for e in entries if e.is_season]
+    extras = [e for e in entries if not e.is_season]
+
+    # sort seasons chronologically
+    seasons.sort(key=lambda x: safe_date_tuple(x.start_date))
+
+    # group seasons into groups:
+    groups_map: Dict[str, List[MediaEntry]] = {}
+    auto_counter = 1
+    for s in seasons:
+        if s.is_final_from_title:
+            key = "final"
+        elif s.inferred_part:
+            key = f"num_{s.inferred_part}"
+        else:
+            key = f"auto_{auto_counter}"
+            auto_counter += 1
+        groups_map.setdefault(key, []).append(s)
+
+    # order groups by earliest date
+    def earliest_date_for_gk(gk):
+        return min(safe_date_tuple(e.start_date) for e in groups_map[gk])
+    ordered_keys = sorted(groups_map.keys(), key=earliest_date_for_gk)
+
+    # map to S indexes
+    group_index_map = {k: i+1 for i, k in enumerate(ordered_keys)}
+
+    # produce season groups output with parts labeled as S#, S#B etc.
+    season_groups_output = []
+    for gk in ordered_keys:
+        idx = group_index_map[gk]
+        group_entries = sorted(groups_map[gk], key=lambda x: safe_date_tuple(x.start_date))
+        parts_out = []
+        for p_i, ent in enumerate(group_entries, start=1):
+            if p_i == 1:
+                short_label = f"S{idx}"
+            else:
+                suffix = chr(ord("A") + (p_i - 1))  # 2 -> B, 3 -> C...
+                short_label = f"S{idx}{suffix}"
+            parts_out.append({
+                "short_label": short_label,
+                "title": ent.title_display(),
+                "mal_id": ent.mal_id,
+                "anilist_id": ent.anilist_id,
+                "start_date": ent.start_date,
+                "format": ent.format,
+                "is_final": ent.is_final_from_title
+            })
+        group_label = "Final Season" if any(e.is_final_from_title for e in group_entries) else f"Season {idx}"
+        season_groups_output.append({
+            "season_index": idx,
+            "group_key": gk,
+            "group_label": group_label,
+            "parts": parts_out
+        })
+
+    extras_out = []
+    for e in sorted(extras, key=lambda x: safe_date_tuple(x.start_date)):
+        extras_out.append({
+            "title": e.title_display(),
+            "mal_id": e.mal_id,
+            "anilist_id": e.anilist_id,
+            "format": e.format,
+            "start_date": e.start_date
+        })
+
+    # also include the flat entries timeline
+    entries_out = [{
+        "title": e.title_display(),
+        "mal_id": e.mal_id,
+        "anilist_id": e.anilist_id,
+        "format": e.format,
+        "start_date": e.start_date,
+        "is_season": e.is_season,
+        "is_final": e.is_final_from_title,
+        "inferred_part": e.inferred_part
+    } for e in entries]
+
+    return {
+        "entries": entries_out,
+        "season_groups": season_groups_output,
+        "extras": extras_out
+    }
 
 # --- Module & Extension Loading ---
 MODULES_DIR = "modules"
@@ -240,7 +684,7 @@ def load_extensions(app: FastAPI):
             if "port" in ext_meta and "start_command" in ext_meta:
                 ext_port = ext_meta["port"]
                 ext_start_command = ext_meta["start_command"]
-                ext_server_url = f"https://127.0.0.1:{ext_port}"
+                ext_server_url = f"http://127.0.0.1:{ext_port}"
 
                 print(f"Starting extension '{ext_name}' server in the background.")
                 
@@ -346,6 +790,10 @@ def load_profiles():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- Startup ---
+    global http_client
+    # Initialize the shared AsyncClient
+    http_client = httpx.AsyncClient()
+    
     load_modules()
     load_profiles()
     load_extensions(app)
@@ -359,7 +807,12 @@ async def lifespan(app: FastAPI):
 
     # --- Shutdown ---
     print("\nShutting down Animex Extension Server...")
-    # Correctly iterate through loaded_extensions to find running processes
+    
+    # Close the shared HTTP client
+    if http_client:
+        await http_client.aclose()
+
+    # Terminate background extension processes
     for ext_name, ext_data in loaded_extensions.items():
         process = ext_data.get("process")
         if process and process.poll() is None:
@@ -440,16 +893,11 @@ async def get_extension_info(ext_name: str):
 
 @app.get("/identify", include_in_schema=False)
 def identify_server():
-    return {"app": "Animex Extension API", "version": "1.0"}
+    return {"app": "Animex Extension API", "version": "1.5"}
 
 @app.get("/status")
 async def get_status():
     return {"status": "online"}
-
-@app.get("/health")
-async def health_check():
-    """Returns the health status of the API."""
-    return {"health": "ok"}
 
 
 @app.get("/export/series/{mal_id}")
@@ -733,6 +1181,25 @@ def get_streaming_modules():
                     "version": module_info.get("version", "N/A")
                 })
     return streaming_modules
+
+@app.get("/modules/manga", response_model=List[Dict[str, Any]])
+def get_manga_modules():
+    """Returns a list of all enabled MANGA modules."""
+    manga_modules = []
+    for name, mod in loaded_modules.items():
+        if module_states.get(name, False):
+            module_info = mod.get("info", {})
+            module_type = module_info.get("type")
+            is_manga_reader = (isinstance(module_type, list) and "MANGA_READER" in module_type) or \
+                              (isinstance(module_type, str) and module_type == "MANGA_READER")
+            if is_manga_reader:
+                manga_modules.append({
+                    "id": name,
+                    "name": module_info.get("name", name),
+                    "version": module_info.get("version", "N/A")
+                })
+    return manga_modules
+
 
 
 # --- Core Content Endpoints ---
@@ -1067,9 +1534,8 @@ async def proxy_mangadex_image(server_host: str, chapter_hash: str, filename: st
             raise HTTPException(status_code=e.response.status_code, detail=f"MangaDex image proxy error: {e.response.text}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred while proxying image: {str(e)}")
+http_client: Optional[httpx.AsyncClient] = None
 
-
-from curl_cffi.requests import AsyncSession
 
 @app.get("/proxy")
 async def generic_proxy(
@@ -1077,91 +1543,145 @@ async def generic_proxy(
     url: str = Query(..., description="Target URL to fetch"),
     referer: Optional[str] = Query(None, description="Referer header to send")
 ):
-    if not url:
-        raise HTTPException(status_code=400, detail="Missing URL parameter")
+    # Security: Prevent access to localhost/internal networks
+    if "localhost" in url or "127.0.0.1" in url:
+        raise HTTPException(status_code=400, detail="Localhost access is restricted.")
 
-    # 1. Setup Headers (Mimic Chrome)
+    # Prepare Headers
     headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/110.0.0.0 Safari/537.36",
-        "Accept": "*/*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Sec-Fetch-Dest": "empty",
-        "Sec-Fetch-Mode": "cors",
-        "Sec-Fetch-Site": "cross-site",
+        "User-Agent": request.headers.get("user-agent", "Mozilla/5.0"),
     }
-
-    # Handle Referer Logic
     if referer:
         headers["Referer"] = referer
-    else:
-        try:
-            parsed = urlparse(url)
-            headers["Referer"] = f"{parsed.scheme}://{parsed.netloc}/"
-        except:
-            pass
-
-    if "range" in request.headers:
-        headers["Range"] = request.headers["range"]
-
-    # 2. Initialize Session
-    s = AsyncSession(impersonate="chrome110", verify=False)
 
     try:
-        # Start the request with stream=True
-        r = await s.get(url, headers=headers, stream=True, timeout=20)
+        # Build the request
+        req = http_client.build_request("GET", url, headers=headers)
         
-        # 3. Handle Upstream Errors (4xx/5xx)
-        if r.status_code >= 400:
-            content = b""
-            # Manually read content since .read() doesn't exist
-            async for chunk in r.aiter_content():
-                content += chunk
-            
-            # Close session synchronously (Fix for NoneType error)
-            s.close()
-            return Response(status_code=r.status_code, content=content)
+        # Send the request with stream=True
+        # We DO NOT use 'async with' here because we need 'r' to stay open 
+        # while StreamingResponse iterates over it.
+        r = await http_client.send(req, stream=True)
 
-        # 4. Prepare Response Headers
-        excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection', 'host']
-        response_headers = {
-            k: v for k, v in r.headers.items()
-            if k.lower() not in excluded_headers
+        # Filter Headers: Removing Content-Length and Transfer-Encoding is crucial
+        # to prevent conflicts with the proxy's own chunked encoding.
+        excluded_headers = {
+            "content-encoding", 
+            "content-length", 
+            "transfer-encoding", 
+            "connection", 
+            "host"
         }
         
-        response_headers["Access-Control-Allow-Origin"] = "*"
+        response_headers = {
+            k: v for k, v in r.headers.items() 
+            if k.lower() not in excluded_headers
+        }
 
-        # 5. Stream Generator
-        async def stream_content():
-            try:
-                async for chunk in r.aiter_content():
-                    yield chunk
-            except Exception as e:
-                print(f"Stream Error: {e}")
-            finally:
-                # Close session synchronously (Fix for NoneType error)
-                try:
-                    s.close()
-                except:
-                    pass
-
-        # 6. Return Streaming Response
+        # Return the streaming response.
+        # We allow FastAPI to iterate over r.aiter_bytes()
+        # Since http_client is shared (global), we don't need to close the client here,
+        # but we should close the response 'r' when done.
+        
         return StreamingResponse(
-            stream_content(),
+            r.aiter_bytes(),
             status_code=r.status_code,
             headers=response_headers,
-            media_type=r.headers.get("content-type", "application/octet-stream") 
+            media_type=r.headers.get("content-type"),
+            background=None # The response is closed automatically when iteration finishes
         )
 
-    except Exception as e:
-        # Cleanup on failure
-        try:
-            s.close()
-        except:
-            pass
-        
-        print(f"Proxy Connection Failed: {e}")
-        return Response(content=f"Proxy Error: {str(e)}", status_code=500)
+    except httpx.RequestError as exc:
+        raise HTTPException(status_code=502, detail=f"Error fetching URL: {exc}")
 
+
+ANIMETHEMES_API = "https://api.animethemes.moe"
+
+def extract_artists(song: dict) -> list[str]:
+    artists = song.get("artists") or []
+    return [a.get("name") for a in artists if a.get("name")]
+
+
+@app.get("/api/themes/{mal_id}")
+async def get_themes(mal_id: int):
+    """
+    Fetches themes for a specific MyAnimeList ID.
+    Resolves MAL ID -> AnimeThemes ID -> Flattens Video List.
+    """
+    try:
+        async with httpx.AsyncClient() as client:
+            resp = await client.get(
+                f"{ANIMETHEMES_API}/anime",
+                params={
+                    "filter[has]": "resources",
+                    "filter[site]": "MyAnimeList",
+                    "filter[external_id]": mal_id,
+                    "include": "animethemes.song.artists,animethemes.animethemeentries.videos",
+                    "page[size]": 1
+                },
+                timeout=10.0
+            )
+
+            if resp.status_code != 200:
+                raise HTTPException(status_code=resp.status_code, detail="Upstream API error")
+
+            data = resp.json()
+            anime_list = data.get("anime", [])
+
+            if not anime_list:
+                return []
+
+            anime = anime_list[0]
+            themes = []
+            seen = set()
+
+            for theme in anime.get("animethemes", []):
+                song = theme.get("song", {})
+                theme_type = theme.get("type")
+                slug = theme.get("slug")
+
+                artists = extract_artists(song)
+
+                for entry in theme.get("animethemeentries", []):
+                    for video in entry.get("videos", []):
+                        url = video.get("link")
+                        if not url:
+                            continue
+
+                        key = (
+                            url,
+                            video.get("resolution", 0),
+                            video.get("title", "")
+                        )
+
+                        if key in seen:
+                            continue
+                        seen.add(key)
+
+                        themes.append({
+                            "title": song.get("title") or "Unknown",
+                            "artists": artists,            # ← NEW
+                            "type": theme_type,
+                            "slug": slug,
+                            "url": url,
+                            "res": video.get("resolution", 0),
+                            "nc": video.get("nc", False),
+                            "source": video.get("source"),
+                        })
+
+            themes.sort(
+                key=lambda x: (x["nc"], x["res"]),
+                reverse=True
+            )
+
+            return themes
+
+    except Exception as e:
+        print(f"Error fetching themes: {e}")
+        return []
+
+    
+    
 # --- Jikan Endpoints ---
 app.mount("/templates", StaticFiles(directory="templates"), name="templates")
 
@@ -1628,6 +2148,67 @@ async def mal_to_kitsu(mal_id: int):
             raise HTTPException(status_code=404, detail=f"No Kitsu ID found for MAL ID {mal_id}")
             
     raise HTTPException(status_code=404, detail=f"MAL ID {mal_id} not found in database")
+
+@app.get("/anime/{mal_id}/ep/{ep_number}/thumbnail")
+async def get_episode_thumbnail(mal_id: int, ep_number: int):
+    # 1. Map MAL -> Kitsu
+    mapping = await mal_to_kitsu(mal_id)
+    kitsu_id = mapping["kitsu_id"]
+
+    KITSU_EPISODE_URL = f"https://kitsu.io/api/edge/anime/{kitsu_id}/episodes?filter[number]={ep_number}"
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(KITSU_EPISODE_URL, timeout=15)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch episode from Kitsu")
+        data = resp.json()
+
+    if not data.get("data"):
+        raise HTTPException(status_code=404, detail=f"Episode {ep_number} not found for MAL {mal_id}")
+
+    # Kitsu returns a list but filtering by number=ep_number usually returns 1
+    episode = data["data"][0]
+    attributes = episode.get("attributes", {})
+    thumbnail = attributes.get("thumbnail") or {}
+    thumb_url = thumbnail.get("original")
+
+    if not thumb_url:
+        raise HTTPException(status_code=404, detail="No thumbnail found for this episode")
+
+    return {"mal_id": mal_id, "episode": ep_number, "thumbnail_url": thumb_url}
+
+@app.get("/anime/{mal_id}/movie/thumbnail")
+async def get_movie_thumbnail(mal_id: int):
+    """
+    Returns the thumbnail for a movie anime given a MAL ID.
+    """
+    # 1. Map MAL -> Kitsu
+    mapping = await mal_to_kitsu(mal_id)
+    kitsu_id = mapping["kitsu_id"]
+
+    KITSU_ANIME_URL = f"https://kitsu.io/api/edge/anime/{kitsu_id}"
+
+    async with httpx.AsyncClient() as client:
+        resp = await client.get(KITSU_ANIME_URL, timeout=15)
+        if resp.status_code != 200:
+            raise HTTPException(status_code=502, detail="Failed to fetch anime from Kitsu")
+        data = resp.json()
+
+    attributes = data.get("data", {}).get("attributes", {})
+    # Poster (thumbnail) for the movie
+    poster = attributes.get("posterImage", {}).get("original")
+    # Optional: cover image for larger banner
+    cover = attributes.get("coverImage", {}).get("original")
+
+    if not poster:
+        raise HTTPException(status_code=404, detail="No thumbnail found for this movie")
+
+    return {
+        "mal_id": mal_id,
+        "thumbnail_url": poster,
+        "cover_url": cover
+    }
+
     
 ANILIST_API_URL = "https://graphql.anilist.co"
 ANILIST_QUERY = """
@@ -1643,11 +2224,74 @@ query ($malId: Int) {
   }
 }
 """
-@app.get("/anime/image")
-async def get_anime_image(
-    mal_id: int = Query(..., description="MyAnimeList anime ID"),
-    cover: bool = Query(False, description="Return cover image instead of banner")
+
+ANILIST_MANGA_QUERY = """
+query ($malId: Int) {
+  Media(idMal: $malId, type: MANGA) {
+    id
+    bannerImage
+    coverImage {
+      extraLarge
+      large
+      medium
+    }
+  }
+}
+"""
+
+@app.get("/manga/{mal_id}/banner")
+async def get_manga_banner(
+    mal_id: int,
+    cover: bool = Query(False, description="whether to fetch cover image instead of banner")
 ):
+    payload = {
+        "query": ANILIST_MANGA_QUERY,
+        "variables": {"malId": mal_id}
+    }
+
+    async with httpx.AsyncClient() as client:
+        try:
+            res = await client.post(ANILIST_API_URL, json=payload, timeout=10)
+            res.raise_for_status()
+
+            data = res.json()
+            media = data.get("data", {}).get("Media")
+            if not media:
+                raise HTTPException(status_code=404, detail="Manga not found on AniList")
+
+            if cover:
+                image_url = (
+                    media.get("coverImage", {}).get("extraLarge")
+                    or media.get("coverImage", {}).get("large")
+                    or media.get("coverImage", {}).get("medium")
+                )
+            else:
+                image_url = media.get("bannerImage")
+
+            if not image_url:
+                raise HTTPException(status_code=404, detail="Image not available for this manga")
+
+            img_response = await client.get(image_url, timeout=15)
+            img_response.raise_for_status()
+
+            content_type = img_response.headers.get("Content-Type", "image/jpeg")
+            return StreamingResponse(io.BytesIO(img_response.content), media_type=content_type)
+
+        except httpx.HTTPStatusError as e:
+            raise HTTPException(
+                status_code=e.response.status_code,
+                detail=f"Error from upstream API: {e.response.text}"
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"An unexpected error occurred: {str(e)}"
+            )
+
+
+
+@app.get("/anime/{mal_id}/banner")
+async def get_anime_seasons(mal_id: int, cover: bool = Query(False, description="wether to fetch cover image instead of banner")):
     payload = {
         "query": ANILIST_QUERY,
         "variables": {"malId": mal_id}
@@ -1682,6 +2326,126 @@ async def get_anime_image(
             raise HTTPException(status_code=e.response.status_code, detail=f"Error from upstream API: {e.response.text}")
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {str(e)}")
+
+
+VA_QUERY = """
+query ($idMal: Int, $page: Int) {
+  Media(idMal: $idMal, type: ANIME) {
+    id
+    title {
+      romaji
+      english
+    }
+    characters(page: $page, perPage: 25) {
+      pageInfo {
+        hasNextPage
+      }
+      edges {
+        role
+        node {
+          id
+          name {
+            full
+            native
+          }
+          image {
+            large
+          }
+        }
+        voiceActors {
+          id
+          name {
+            full
+            native
+          }
+          language
+          image {
+            large
+          }
+        }
+      }
+    }
+  }
+}
+"""
+        
+@app.get("/anime/{mal_id}/characters")
+async def get_anime_characters(mal_id: int):
+    """
+    Fetch characters and their voice actors (with images) for an anime,
+    using AniList (no rate limit issues).
+    """
+    page = 1
+    characters: List[Dict[str, Any]] = []
+
+    async with httpx.AsyncClient(timeout=20) as client:
+        while True:
+            resp = await client.post(
+                ANILIST_URL,
+                json={
+                    "query": VA_QUERY,
+                    "variables": {
+                        "idMal": mal_id,
+                        "page": page
+                    }
+                }
+            )
+
+            if resp.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail="AniList request failed"
+                )
+
+            payload = resp.json()
+            media = payload.get("data", {}).get("Media")
+
+            if not media:
+                raise HTTPException(
+                    status_code=404,
+                    detail="Anime not found on AniList"
+                )
+
+            char_block = media["characters"]
+
+            for edge in char_block["edges"]:
+                char_node = edge["node"]
+
+                characters.append({
+                    "role": edge["role"],  # MAIN / SUPPORTING / BACKGROUND
+                    "character": {
+                        "id": char_node["id"],
+                        "name": char_node["name"]["full"]
+                                or char_node["name"]["native"],
+                        "image": char_node["image"]["large"]
+                    },
+                    "voice_actors": [
+                        {
+                            "id": va["id"],
+                            "name": va["name"]["full"]
+                                    or va["name"]["native"],
+                            "language": va["language"],
+                            "image": va["image"]["large"]
+                        }
+                        for va in edge["voiceActors"]
+                    ]
+                })
+
+            if not char_block["pageInfo"]["hasNextPage"]:
+                break
+
+            page += 1
+
+    # Sort: MAIN → SUPPORTING → BACKGROUND
+    role_order = {"MAIN": 0, "SUPPORTING": 1, "BACKGROUND": 2}
+    characters.sort(key=lambda x: role_order.get(x["role"], 99))
+
+    return {
+        "mal_id": mal_id,
+        "title": media["title"]["english"] or media["title"]["romaji"],
+        "characters": characters
+    }
+
 
 
 async def _fetch_jikan_with_retry(url: str, client: httpx.AsyncClient, retries=2, delay=1.0):
@@ -1733,43 +2497,52 @@ async def _get_english_title(mal_id: int, client: httpx.AsyncClient):
 @app.get("/anime/{mal_id}/seasons")
 async def get_anime_seasons(mal_id: int):
     """
-    Fetches a list of related anime seasons/entries for a given MAL ID.
+    Fetch seasons/related entries for a MAL ID.
+    Returns JSON: { entries: [...], season_groups: [...], extras: [...] }
     """
     async with httpx.AsyncClient() as client:
-        relations_json = await _fetch_jikan_with_retry(f"https://api.jikan.moe/v4/anime/{mal_id}/relations", client)
-        
-        collected = {mal_id: {"mal_id": mal_id, "relation": "self"}}
+        entries = await collect_franchise(client, root_mal=mal_id)
 
-        if relations_json and relations_json.get("data"):
-            for rel in relations_json["data"]:
-                rel_type = (rel.get("relation") or "").strip()
-                if rel_type.lower() == "other":
-                    continue
-                for entry in rel.get("entry", []):
-                    if entry.get("type") == "anime":
-                        entry_id = entry.get("mal_id")
-                        if not entry_id: continue
-                        
-                        if entry_id not in collected:
-                            collected[entry_id] = {"mal_id": entry_id, "relation": rel_type}
-                        else:
-                            if rel_type not in collected[entry_id]["relation"]:
-                                collected[entry_id]["relation"] += f", {rel_type}"
+        # If AniList returned nothing (rare), fallback to Jikan relations -> then fetch AniList data for each related MAL id
+        if not entries or (len(entries) == 1 and entries[0].mal_id != mal_id):
+            jikan_rel = await fetch_jikan_relations(client, mal_id)
+            if jikan_rel:
+                # fetch AniList media details for each mal found
+                stack = [r["mal_id"] for r in jikan_rel if r.get("mal_id")]
+                stack.append(mal_id)
+                # fetch all and build entries
+                entries_map = {}
+                for mid in stack:
+                    media = await fetch_media(client, mal_id=mid)
+                    if not media:
+                        continue
+                    tid = media.get("title") or {}
+                    romaji = tid.get("romaji") or ""
+                    english = tid.get("english")
+                    native = tid.get("native")
+                    e = MediaEntry(
+                        anilist_id=media.get("id"),
+                        mal_id=media.get("idMal"),
+                        title_romaji=romaji,
+                        title_english=english,
+                        title_native=native,
+                        format=media.get("format"),
+                        start_date=media.get("startDate") or {"year": None, "month": None, "day": None},
+                        season=media.get("season"),
+                        season_year=media.get("seasonYear"),
+                        episodes=media.get("episodes"),
+                        inferred_part=extract_part_from_title(english or romaji or native or ""),
+                        is_season=(media.get("format") in SEASON_FORMATS),
+                        is_final_from_title=detect_final_in_title(english or romaji or native or "")
+                    )
+                    entries_map[e.mal_id or f"aid_{e.anilist_id}"] = e
+                entries = sorted(list(entries_map.values()), key=lambda x: safe_date_tuple(x.start_date))
 
-        title_tasks = [_get_english_title(mid, client) for mid in collected.keys()]
-        titles = await asyncio.gather(*title_tasks)
+        if not entries:
+            raise HTTPException(status_code=404, detail="Could not fetch details for the requested anime.")
 
-        final_list = []
-        for i, (mid, data) in enumerate(collected.items()):
-            title = titles[i]
-            if title:
-                data["title"] = title
-                final_list.append(data)
-
-        if not any(item['mal_id'] == mal_id for item in final_list):
-             raise HTTPException(status_code=404, detail="Could not fetch details for the requested anime.")
-
-    return sorted(final_list, key=lambda x: x["mal_id"])
+        out = produce_season_labeling(entries)
+        return out
 
 # --- Generic Extension Proxy ---
 @app.api_route("/ext/{ext_name}/{path:path}", methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS", "HEAD"])
@@ -1817,7 +2590,7 @@ async def proxy_to_extension(ext_name: str, path: str, request: Request):
 
 # --- Static Files Hosting ---
 app.mount("/data", StaticFiles(directory="data"), name="data")
-app.mount("/", StaticFiles(directory="animex", html=True), name="static_site")
+app.mount("/", StaticFiles(directory="../animex", html=True), name="static_site")
 print("Static files mounted at /data and /")
 
 # --- To make the server runnable directly ---

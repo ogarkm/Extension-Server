@@ -165,6 +165,7 @@ async def resolve_stream_url(
 
     media = await client.get(media_url)
     mega = await dec_mega(client, media.json()["result"])
+    print(mega)
 
     sources = mega.get("result", {}).get("sources", [])
     tracks = mega.get("result", {}).get("tracks", [])

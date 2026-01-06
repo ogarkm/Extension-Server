@@ -291,6 +291,7 @@
       let currentProfile = null;
       let userPref = localStorage.getItem('animeDubPref') || 'sub';
       let currentModule = 'default';
+      let fetchedAnimeData = null; // Declare here to make it accessible
 
       // --- Main Initialization ---
       try {
@@ -305,9 +306,9 @@
         loadingContainer.style.display = 'flex';
 
         await fetchProfile();
-        const animeData = await fetchAnimeData();
-        updateUI(animeData);
-        await logWatchHistory(jikanId, episode, animeData.title);
+        fetchedAnimeData = await fetchAnimeData(); // Assign to the new variable
+        updateUI(fetchedAnimeData);
+        await logWatchHistory(jikanId, episode, fetchedAnimeData.title);
         await populateSourceChanger();
 
         if (userPref === 'dub') {
@@ -318,7 +319,7 @@
           dubOptionBtn.classList.remove('active');
         }
 
-        await loadIframe(userPref === 'dub', currentModule, animeData);
+        await loadIframe(userPref === 'dub', currentModule, fetchedAnimeData); // Pass fetchedAnimeData
         setupEventListeners();
         setTimeout(moveActiveIndicator, 150);
 
@@ -378,7 +379,7 @@
           const [jikanInfoResp, jikanEpisodesResp, kitsuMapResp] = await Promise.all([
             fetch(`https://api.jikan.moe/v4/anime/${jikanId}`),
             fetch(`https://api.jikan.moe/v4/anime/${jikanId}/episodes`),
-            fetch(`https://${serverIp}/map/mal/${jikanId}`)
+            fetch(`http://${serverIp}:7275/map/mal/${jikanId}`)
           ]);
 
           if (jikanInfoResp.ok) {
@@ -429,7 +430,7 @@
 
       async function populateSourceChanger() {
         try {
-          const response = await fetch(`https://${serverIp}/modules/streaming`);
+          const response = await fetch(`http://${serverIp}:7275/modules/streaming`);
           if (!response.ok) throw new Error('Failed to fetch streaming modules');
           const modules = await response.json();
 
@@ -498,14 +499,25 @@
             loadingContainer.style.display = 'flex';
         }
 
-        let iframeSrcURL = `https://${serverIp}/iframe-src?mal_id=${jikanId}&episode=${episode}&dub=${dub}`;
+        let iframeSrcURL = `http://${serverIp}:7275/iframe-src?mal_id=${jikanId}&episode=${episode}&dub=${dub}`;
         if (preferModule && preferModule !== 'default') {
           iframeSrcURL += `&prefer_module=${encodeURIComponent(preferModule)}`;
         }
 
         try {
           const res = await fetch(iframeSrcURL);
-          if (!res.ok) throw new Error(`Proxy error ${res.status}`);
+          if (!res.ok) {
+            if (res.status === 404 && preferModule !== 'default') {
+              console.warn(`Module '${preferModule}' failed with 404. Retrying with 'default' module.`);
+              // Clear previous error message if any
+              playerContainer.innerHTML = '';
+              // Retry with default module
+              await loadIframe(dub, 'default', animeData);
+              return; // Stop execution here as the retry is handled
+            } else {
+              throw new Error(`Proxy error ${res.status}`);
+            }
+          }
           const json = await res.json();
           if (!json.src) throw new Error('No embed source found from any module');
 
@@ -550,9 +562,11 @@
             subOptionBtn.classList.add('active');
             dubOptionBtn.classList.remove('active');
             moveActiveIndicator();
-            await loadIframe(false, currentModule);
+            // FIX: Pass fetchedAnimeData as the 3rd argument
+            await loadIframe(false, currentModule, fetchedAnimeData);
           }
         });
+
         dubOptionBtn.addEventListener('click', async () => {
           if (userPref !== 'dub') {
             userPref = 'dub';
@@ -560,22 +574,27 @@
             dubOptionBtn.classList.add('active');
             subOptionBtn.classList.remove('active');
             moveActiveIndicator();
-            await loadIframe(true, currentModule);
+            // FIX: Pass fetchedAnimeData as the 3rd argument
+            await loadIframe(true, currentModule, fetchedAnimeData);
           }
         });
+
         sourceChangerSelect.addEventListener('change', async () => {
           const selectedModule = sourceChangerSelect.value;
           if (selectedModule !== currentModule) {
             currentModule = selectedModule;
-            await loadIframe(userPref === 'dub', currentModule);
+            // FIX: Pass fetchedAnimeData as the 3rd argument
+            await loadIframe(userPref === 'dub', currentModule, fetchedAnimeData);
           }
         });
+
         reloadIframeBtn.addEventListener('click', () => {
             const iframe = playerContainer.querySelector('iframe');
             if (iframe) {
                 iframe.src = iframe.src;
             }
         });
+
         window.addEventListener('resize', () => setTimeout(moveActiveIndicator, 100));
       }
     });

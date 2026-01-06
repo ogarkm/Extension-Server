@@ -51,8 +51,7 @@
         left: 0;
         width: 100%;
         z-index: 1000;
-        /* ALIGNMENT FIX: Changed padding to 6% to match Hero/Content gutter */
-        padding: 20px 6%; 
+        padding: 20px 6%;
         background: linear-gradient(
           to bottom,
           rgba(0, 0, 0, 0.8) 0%,
@@ -65,7 +64,7 @@
         box-sizing: border-box;
         display: flex;
         align-items: center;
-        justify-content: flex-start; /* Default desktop alignment */
+        justify-content: flex-start;
       }
 
       .navbar.scrolled {
@@ -73,12 +72,12 @@
         backdrop-filter: blur(16px);
         -webkit-backdrop-filter: blur(16px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-        padding: 15px 6%; /* Compact on scroll, keeping alignment */
+        padding: 15px 6%;
       }
 
       .navbar svg {
         display: block;
-        margin: 0; 
+        margin: 0;
         height: 40px;
         width: auto;
         opacity: 0.9;
@@ -92,12 +91,12 @@
       /* --- Hero Section Cinematic Carousel --- */
       #hero-section {
         position: relative;
-        height: 65vh; 
+        height: 65vh;
         min-height: 600px;
         display: flex;
         flex-direction: column;
-        justify-content: center; 
-        padding: 0 6%; /* Horizontal gutter matches Navbar now */
+        justify-content: center;
+        padding: 0 6%;
         box-sizing: border-box;
         overflow: hidden;
       }
@@ -146,12 +145,12 @@
       .hero-content {
         position: relative;
         z-index: 10;
-        text-align: left; 
+        text-align: left;
         display: flex;
         flex-direction: column;
-        align-items: flex-start; 
+        align-items: flex-start;
         gap: 20px;
-        max-width: 50%; 
+        max-width: 50%;
         opacity: 0;
         transform: translateY(30px);
         transition: opacity 0.8s cubic-bezier(0.2, 0.8, 0.2, 1),
@@ -163,9 +162,8 @@
         transform: translateY(0);
       }
 
-      /* --- Hero Logo --- */
       .hero-logo {
-        max-width: 400px; 
+        max-width: 400px;
         max-height: 200px;
         width: 100%;
         object-fit: contain;
@@ -174,23 +172,14 @@
         filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.5));
       }
 
-      .hero-title {
-        font-size: 3.5rem; 
-        font-weight: 800;
-        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
-        margin: 0;
-        line-height: 1.1;
-        display: none; 
-      }
-
       .hero-subtitle {
-        font-size: 1.1rem; 
+        font-size: 1.1rem;
         font-weight: 700;
         color: #e0e0e0;
         text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8);
-        max-width: 600px; 
+        max-width: 600px;
         line-height: 1.4;
-        margin-bottom: 0; 
+        margin-bottom: 0;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
@@ -243,10 +232,9 @@
         transform: scale(1.05);
       }
 
-      /* --- Hero Dots Navigation --- */
       .hero-dots {
         position: absolute;
-        right: 6%; 
+        right: 6%;
         bottom: 40px;
         left: auto;
         transform: none;
@@ -276,45 +264,100 @@
 
       /* --- MEDIA QUERIES (RESPONSIVENESS) --- */
       @media (max-width: 768px) {
-        /* Center Navbar Logo */
         .navbar {
-            justify-content: center;
-            padding: 15px 6%;
+          justify-content: center;
+          padding: 15px 6%;
+          display: none;
         }
 
-        /* Hero Adjustments */
+        #hero-section {
+          height: 55vh;
+          min-height: 400px;
+        }
+
         .hero-content {
-            align-items: center; /* Center Items */
-            text-align: center;  /* Center Text */
-            max-width: 100%;     /* Full width */
+          align-items: center;
+          text-align: center;
+          max-width: 100%;
         }
 
         .hero-logo {
-            object-position: center bottom; /* Center Logo Image */
-            max-width: 80%; /* Adjust size */
-            margin-bottom: 20px;
+          object-position: center bottom;
+          max-width: 80%;
+          margin-bottom: 20px;
         }
 
-        /* Hide Synopsis */
-        .hero-subtitle {
-            display: none;
-        }
-
-        /* Center Buttons */
         .hero-buttons {
-            justify-content: center;
+          margin-top: -10px;
         }
 
-        /* Adjust Dots for Mobile */
+        .hero-background::after {
+          background: radial-gradient(
+            circle at 50% 35%,
+            transparent 0%,
+            rgba(18, 18, 18, 0.2) 40%,
+            var(--background-color) 120%
+          ),
+            linear-gradient(
+              to right,
+              var(--background-color) 0%,
+              rgba(18, 18, 18, 0.4) 50%,
+              transparent 100%
+            ),
+            linear-gradient(to top, var(--background-color) 0%, transparent 40%);
+        }
+
+        .hero-subtitle {
+          display: none;
+        }
+
+        /* --- UPDATED MOBILE CARD SIZES --- */
+        .horizontal-scroll-container {
+          gap: 12px !important; /* Tighter gap so more fit on screen */
+          margin-bottom: -40px;
+        }
+
+        .poster-container {
+          max-width: 150px; /* Reduced Width (Fits ~3-4 cards per row) */
+        }
+
+        .poster-title {
+          font-size: 0.8rem; /* Smaller Font */
+          margin-top: 8px;
+        }
+        
+        .episode-indicator {
+          font-size: 0.65rem; /* Smaller badge */
+          padding: 2px 6px;
+          top: 6px;
+          right: 6px;
+        }
+
+        .poster-image-wrapper {
+          max-width: 150px;
+        }
+        
+        .poster-info-btn {
+          width: 28px;
+          height: 28px;
+          font-size: 0.8rem;
+          top: 6px;
+          left: 6px;
+        }
+        /* -------------------------------- */
+
+        .hero-buttons {
+          justify-content: center;
+        }
+
         .hero-dots {
-            left: 50%;
-            right: auto;
-            transform: translateX(-50%);
-            bottom: 20px;
+          left: 50%;
+          right: auto;
+          transform: translateX(-50%) translateY(-450%);
+          bottom: 20px;
         }
       }
 
-      /* --- Loader --- */
       .loader {
         border: 4px solid rgba(255, 255, 255, 0.1);
         border-top: 4px solid var(--accent-color);
@@ -337,7 +380,7 @@
       /* --- Content Sections --- */
       .content-section {
         margin-bottom: 50px;
-        padding: 0 0 0 6%; /* Align with Hero gutter */
+        padding: 0 0 0 6%;
         position: relative;
         z-index: 5;
       }
@@ -368,9 +411,9 @@
       .horizontal-scroll-container {
         display: flex;
         overflow-x: auto;
-        overflow-y: visible; 
-        padding: 20px 0 40px 0; 
-        gap: 20px;
+        overflow-y: visible;
+        padding: 20px 0 40px 0;
+        gap: 20px; /* Desktop Gap */
         scroll-behavior: smooth;
         mask-image: linear-gradient(to right, black 95%, transparent 100%);
         -webkit-mask-image: linear-gradient(
@@ -391,7 +434,7 @@
       /* --- Poster Cards --- */
       .poster-container {
         flex-shrink: 0;
-        width: 220px; 
+        width: 220px; /* Desktop Width */
         position: relative;
         transition: z-index 0.3s, transform 0.3s;
       }
@@ -400,12 +443,12 @@
         position: relative;
         border-radius: 12px;
         overflow: hidden;
-        aspect-ratio: 2/3; 
+        aspect-ratio: 2/3;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         transition: transform 0.4s var(--transition-smooth),
           box-shadow 0.4s var(--transition-smooth), border-color 0.3s;
-        border: 2px solid transparent; 
-        background-color: #2a2a2a; 
+        border: 2px solid transparent;
+        background-color: #2a2a2a;
       }
 
       .poster-image-wrapper img {
@@ -416,11 +459,11 @@
       }
 
       .poster-container:hover {
-        z-index: 100; 
+        z-index: 100;
       }
 
       .poster-container:hover .poster-image-wrapper {
-        transform: scale(1.1) translateY(-10px);
+        transform: scale(1) translateY(-5px);
         box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
         border-color: rgba(255, 255, 255, 0.2);
       }
@@ -444,7 +487,6 @@
         opacity: 1;
       }
 
-      /* --- Progress Bar --- */
       .progress-bar {
         position: absolute;
         bottom: 0;
@@ -461,11 +503,10 @@
         box-shadow: 0 0 10px var(--accent-color);
       }
 
-      /* --- Episode Badge --- */
       .episode-indicator {
         position: absolute;
         top: 10px;
-        right: 10px; 
+        right: 10px;
         left: auto;
         background-color: rgba(0, 0, 0, 0.6);
         color: #fff;
@@ -479,11 +520,10 @@
         letter-spacing: 0.5px;
       }
 
-      /* --- Context/Info Button on Card --- */
       .poster-info-btn {
         position: absolute;
         top: 10px;
-        left: 10px; 
+        left: 10px;
         right: auto;
         z-index: 3;
         background-color: rgba(30, 30, 30, 0.8);
@@ -494,7 +534,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        opacity: 0; 
+        opacity: 0;
         transform: translateY(-10px);
         transition: all 0.3s ease;
         border: 1px solid rgba(255, 255, 255, 0.2);
@@ -511,7 +551,7 @@
         color: #000;
       }
 
-      /* --- Context Menu (Desktop Modal Style) --- */
+      /* --- Context Menu --- */
       .context-menu-overlay {
         position: fixed;
         inset: 0;
@@ -521,7 +561,7 @@
         -webkit-backdrop-filter: blur(8px);
         display: flex;
         justify-content: center;
-        align-items: center; 
+        align-items: center;
         opacity: 0;
         visibility: hidden;
         transition: opacity 0.3s ease, visibility 0.3s;
@@ -587,7 +627,7 @@
       }
 
       .context-menu-item:not(:last-child) {
-        border-bottom: none; 
+        border-bottom: none;
       }
 
       .context-menu-item.context-menu-cancel {
@@ -610,10 +650,10 @@
       }
     </style>
   </head>
+  <!-- Rest of body content remains identical -->
   <body>
     <nav class="navbar">
-      <!-- ALIGNMENT FIX: Removed inline style "margin-left: 8px" -->
-      <div style="height: 40px;">
+      <div style="height: 40px">
         <svg
           width="1304"
           height="416"
@@ -707,10 +747,8 @@
           if (!malId) return;
 
           let url = `series-info.html?id=${malId}`;
-          // Only add the watch-ep parameter if it's a valid number
           if (episodeToOpen && !isNaN(episodeToOpen)) {
             url += `&watch-ep=${episodeToOpen}`;
-            // Add skip-api flag if this is an ongoing episode (not finished)
             if (skipApiWait) {
               url += `&skip-api=true`;
             }
@@ -802,7 +840,6 @@
           element.addEventListener("touchend", onTouchEnd);
           element.addEventListener("touchcancel", onTouchEnd);
 
-          // For desktop: right-click
           element.addEventListener("contextmenu", (e) => {
             e.preventDefault();
             showContextMenu(element);
@@ -822,12 +859,11 @@
           const action = button.dataset.action;
           const malId = currentContextMenuTarget.dataset.malId;
 
-          hideContextMenu(); // Hide menu immediately on action
+          hideContextMenu();
 
           if (action === "info") {
             if (malId) openSeriesOverlay(malId);
           } else if (action === "mark-watched") {
-            // Placeholder for future implementation
             window.parent.showToast(
               `'Mark as Watched' for series ID ${malId} is not yet implemented.`
             );
@@ -911,7 +947,7 @@
 
           heroContent.classList.remove("visible");
 
-          const isMobile = window.innerWidth <= 768; // Define what "mobile" means
+          const isMobile = window.innerWidth <= 768;
           const imageUrl =
             isMobile && currentAnime.image_tall
               ? currentAnime.image_tall
@@ -960,17 +996,16 @@
           );
         }
 
-        // --- CONTINUE WATCHING LOGIC (FIXED) ---
-        let continueWatchingList = []; // Store the processed list globally
+        // --- CONTINUE WATCHING LOGIC ---
+        let continueWatchingList = [];
 
         async function initializeContinueWatching(watchHistory) {
           if (!watchHistory || Object.keys(watchHistory).length === 0) {
-            return; // No history, so we do nothing.
+            return;
           }
 
           const processedList = [];
 
-          // Iterate over each show ID in the history object
           for (const showId in watchHistory) {
             const showData = watchHistory[showId];
             if (!showData) continue;
@@ -979,7 +1014,6 @@
             let lastWatchedEpisodeNumber = null;
             let lastWatchedEpisodeData = null;
 
-            // Find the absolute most recently watched episode for this show
             for (const episodeNumber in showData) {
               const episodeData = showData[episodeNumber];
               if (episodeData && episodeData.last_watched) {
@@ -995,7 +1029,6 @@
               }
             }
 
-            // If we found a watched episode, add it to our list for sorting
             if (lastWatchedTimestamp && lastWatchedEpisodeNumber) {
               processedList.push({
                 show_id: showId,
@@ -1006,12 +1039,11 @@
             }
           }
 
-          // Sort the entire list by the most recent timestamp, descending
           processedList.sort(
             (a, b) => b.last_watched_date - a.last_watched_date
           );
 
-          continueWatchingList = processedList; // Store globally for updates
+          continueWatchingList = processedList;
 
           if (processedList.length > 0) {
             await renderContinueWatchingSection(processedList);
@@ -1031,20 +1063,18 @@
           const section = document.createElement("section");
           section.className = "content-section";
           section.innerHTML = `<h2 class="section-title">Continue Watching</h2><div class="horizontal-scroll-container"></div>`;
-          mainContentArea.prepend(section); // Add this section to the top
+          mainContentArea.prepend(section);
 
           const container = section.querySelector(
             ".horizontal-scroll-container"
           );
 
           for (const item of list.slice(0, 15)) {
-            // Use the pre-calculated last watched episode number
             const lastWatchedEp = item.last_watched_episode;
             const episodeData = item.episode_data;
             if (!lastWatchedEp || !episodeData) continue;
 
             try {
-              // Add a small delay between Jikan API calls to avoid rate-limiting
               await new Promise((resolve) => setTimeout(resolve, 350));
               const response = await fetch(
                 `${JIKAN_API_BASE_URL}/anime/${item.show_id}`
@@ -1056,13 +1086,11 @@
 
               const title = animeData.title_english || animeData.title;
 
-              // Calculate progress based on timestamp and episode_length from local storage
               const timestamp = episodeData.timestamp || 0;
               const episodeLength = episodeData.episode_length || 0;
               const progressPercent =
                 episodeLength > 0 ? (timestamp / episodeLength) * 100 : 0;
 
-              // Determine indicator text and episode to open
               const isFinished = episodeData.state === "finished";
               const episodeToOpen = isFinished
                 ? lastWatchedEp + 1
@@ -1073,7 +1101,7 @@
 
               const posterContainer = document.createElement("div");
               posterContainer.className = "poster-container";
-              posterContainer.dataset.malId = animeData.mal_id; // Set ID for context menu
+              posterContainer.dataset.malId = animeData.mal_id;
               posterContainer.innerHTML = `
                 <div class="poster-image-wrapper">
                     <div class="episode-indicator">EP ${lastWatchedEp} • ${indicatorText}</div>
@@ -1109,7 +1137,7 @@
           }
         }
 
-        // --- HORIZONTAL SECTION LOGIC (from content.json) ---
+        // --- HORIZONTAL SECTION LOGIC ---
         function createHorizontalSections(sections) {
           if (!sections || sections.length === 0) return;
 
@@ -1155,14 +1183,13 @@
           const section = document.querySelector(
             ".content-section:has(.section-title:first-child)"
           );
-          if (!section) return; // No continue watching section yet
+          if (!section) return;
 
           const container = section.querySelector(
             ".horizontal-scroll-container"
           );
           if (!container) return;
 
-          // Update each item's progress and indicator
           const posterContainers =
             container.querySelectorAll(".poster-container");
 
@@ -1176,12 +1203,10 @@
 
             if (!posterContainer) continue;
 
-            // Get fresh data from localWatchHistory
             const currentEpisodeData =
               localWatchHistory[item.show_id]?.[item.last_watched_episode];
             if (!currentEpisodeData) continue;
 
-            // Update progress bar
             const timestamp = currentEpisodeData.timestamp || 0;
             const episodeLength = currentEpisodeData.episode_length || 0;
             const progressPercent =
@@ -1194,7 +1219,6 @@
               progressBarInner.style.width = progressPercent + "%";
             }
 
-            // Update indicator text
             const isFinished = currentEpisodeData.state === "finished";
             const indicatorText = isFinished ? "END" : formatSeconds(timestamp);
 
@@ -1216,7 +1240,6 @@
 
             initializeHero(contentData.spotlight);
 
-            // Use global localWatchHistory loaded by index.html
             if (
               window.localWatchHistory &&
               Object.keys(window.localWatchHistory).length > 0
@@ -1226,10 +1249,9 @@
 
             createHorizontalSections(contentData.sections);
 
-            // Start auto-refresh of continue watching section every second
             setInterval(() => {
               if (window.localWatchHistory) {
-                loadLocalWatchHistory(); // Refresh local watch history
+                loadLocalWatchHistory();
                 refreshContinueWatchingSection();
               }
             }, 1000);

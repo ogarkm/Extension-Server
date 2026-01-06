@@ -1,9 +1,8 @@
 {
     "spotlight": [
         {
-            "id": 58567,
+            "id": 52299,
             "name": "Solo Leveling",
-            "synopsis": "The 'World's Weakest Hunter' awakens a mysterious System, allowing him to level up infinitely and become a monarch.",
             "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GDKHZEJ0K-backdrop_tall",
             "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=3840/keyart/GDKHZEJ0K-backdrop_wide",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GDKHZEJ0K-title_logo-en-us"
@@ -11,38 +10,26 @@
         {
             "id": 51009,
             "name": "Jujutsu Kaisen: Shibuya Incident",
-            "synopsis": "Halloween in Shibuya. Sorcerers rush to break a massive barrier, unaware of a deadly trap set to seal Satoru Gojo.",
-            "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=1920/keyart/GRDV0019R-backdrop_wide",
-            "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GRDV0019R-backdrop_tall",
+            "image": "https://images4.alphacoders.com/138/1389939.jpg",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GRDV0019R-title_logo-en-us"
         },
         {
             "id": 52991,
             "name": "Frieren: Beyond Journey's End",
-            "synopsis": "Elf mage Frieren retraces her past adventure, confronting the passage of time and the meaning of life after the hero's death.",
-            "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=1920/keyart/GG5H5XQX4-backdrop_wide",
+            "image": "https://res.cloudinary.com/dsa5iolcx/image/upload/v1752203413/frieren.jpg",
             "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GG5H5XQX4-backdrop_tall",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GG5H5XQX4-title_logo-en-us"
         },
         {
             "id": 21,
             "name": "One Piece",
-            "synopsis": "Luffy and his Straw Hat crew sail the perilous Grand Line to find the legendary One Piece and become King of the Pirates.",
             "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=1920/keyart/GRMG8ZQZR-backdrop_wide",
             "image_tall": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=1680,height=2520/keyart/GRMG8ZQZR-backdrop_tall",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GRMG8ZQZR-title_logo-en-us"
         },
         {
-            "id": 16498,
-            "name": "Attack on Titan",
-            "synopsis": "Trapped behind walls to survive man-eating Titans, Eren Yeager vows to slaughter them all after they destroy his home.",
-            "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=3840/keyart/GR751KNZY-backdrop_wide",
-            "logo": "https://cdn.prod.website-files.com/64ea57571d50b02423c4505d/64fa2af723cae8e0aa0e0101_attack%20on%20titan%20logo.png"
-        },
-        {
             "id": 52588,
             "name": "Kaiju No. 8",
-            "synopsis": "Kafka Hibino, a monster corpse cleaner, gains the power to transform into a Kaiju and fights to join the Defense Force.",
             "image": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=cover,format=auto,quality=85,width=3840/keyart/GG5H5XQ7D-backdrop_wide",
             "logo": "https://imgsrv.crunchyroll.com/cdn-cgi/image/fit=contain,format=auto,quality=85,width=600/keyart/GG5H5XQ7D-title_logo-en-us"
         }

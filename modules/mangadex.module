@@ -1,0 +1,187 @@
+{
+    "name": "MangaDex Reader",
+    "version": "1.0.0",
+    "author": "Animex",
+    "description": "Fetches manga chapters and page images from MangaDex using their v5 API.",
+    "type": "MANGA_READER",
+    "requirements": ["httpx"]
+}
+---
+import asyncio
+import httpx
+from typing import Optional, List, Dict, Any
+
+# --- Helper Functions ---
+
+async def get_title_from_mal(mal_id: int, client: httpx.AsyncClient) -> Optional[str]:
+    """
+    Fetches the primary English or Romaji title from Jikan (MAL API) 
+    to use for searching MangaDex.
+    """
+    url = f"https://api.jikan.moe/v4/manga/{mal_id}"
+    try:
+        resp = await client.get(url, timeout=10)
+        resp.raise_for_status()
+        data = resp.json().get("data", {})
+        # Prefer English title for search accuracy, fallback to default title
+        return data.get("title_english") or data.get("title")
+    except Exception as e:
+        print(f"MangaDex-Module: Jikan API error: {e}")
+        return None
+
+async def find_mangadex_id(mal_id: int, title: str, client: httpx.AsyncClient) -> Optional[str]:
+    """
+    Searches MangaDex for the title and verifies the MAL ID in the metadata 
+    to ensure we have the correct manga.
+    """
+    search_url = "https://api.mangadex.org/manga"
+    params = {
+        "title": title,
+        "limit": 10,
+        "order[relevance]": "desc"
+    }
+    
+    try:
+        resp = await client.get(search_url, params=params, timeout=10)
+        resp.raise_for_status()
+        results = resp.json().get("data", [])
+        
+        for manga in results:
+            attributes = manga.get("attributes", {})
+            links = attributes.get("links", {})
+            
+            # Check if the MAL ID provided in MangaDex metadata matches our target
+            # Note: links['mal'] is a string in their API
+            if links.get("mal") == str(mal_id):
+                return manga["id"]
+        
+        # Fallback: If no strict MAL ID match found, return the first result 
+        # if the titles are very similar (basic loose match)
+        if results:
+             print(f"MangaDex-Module: Strict MAL ID match failed. Defaulting to top search result: {results[0]['attributes']['title']}")
+             return results[0]["id"]
+             
+        return None
+
+    except Exception as e:
+        print(f"MangaDex-Module: Search failed: {e}")
+        return None
+
+# --- Main Module Functions ---
+
+async def get_chapters(mal_id: int) -> Optional[List[Dict[str, Any]]]:
+    """
+    Asynchronously gets a list of chapters for a given MyAnimeList ID 
+    via MangaDex API.
+    """
+    async with httpx.AsyncClient() as client:
+        # 1. Get Title from MAL
+        title = await get_title_from_mal(mal_id, client)
+        if not title:
+            print("MangaDex-Module: Could not retrieve title from MAL.")
+            return None
+
+        # 2. Find MangaDex UUID
+        md_id = await find_mangadex_id(mal_id, title, client)
+        if not md_id:
+            print(f"MangaDex-Module: Could not find MangaDex ID for MAL ID {mal_id}")
+            return None
+
+        # 3. Fetch Chapter Feed
+        # We filter by English ('en') and sort by chapter number ascending.
+        feed_url = f"https://api.mangadex.org/manga/{md_id}/feed"
+        params = {
+            "translatedLanguage[]": "en",
+            "order[chapter]": "desc",
+            "limit": 500, # Max limit per request
+            "includes[]": "scanlation_group"
+        }
+        
+        try:
+            resp = await client.get(feed_url, params=params, timeout=10)
+            resp.raise_for_status()
+            data = resp.json().get("data", [])
+
+            formatted_chapters = []
+            seen_chapters = set()
+
+            for ch in data:
+                attr = ch.get("attributes", {})
+                chapter_num = attr.get("chapter")
+                
+                # Handle "Oneshot" or missing numbers
+                if chapter_num is None:
+                    continue
+
+                # Deduplication: MangaDex often has multiple uploads (groups) for the same chapter.
+                # We simply take the first one we see (api returns them based on default sort).
+                if chapter_num in seen_chapters:
+                    continue
+                seen_chapters.add(chapter_num)
+
+                chapter_title = attr.get("title") or f"Chapter {chapter_num}"
+                
+                # We store the MangaDex Chapter UUID in the 'url' field implies it acts as the identifier
+                # The 'url' here is internal to this system logic, used later in get_chapter_images
+                formatted_chapters.append({
+                    "title": chapter_title,
+                    "url": ch["id"], # We store the UUID here to use later
+                    "chapter_number": str(chapter_num)
+                })
+            
+            return formatted_chapters
+
+        except Exception as e:
+            print(f"MangaDex-Module: Error fetching chapters: {e}")
+            return None
+
+async def get_chapter_images(mal_id: int, chapter_num: str) -> Optional[List[str]]:
+    """
+    Asynchronously gets page image URLs for a specific chapter number.
+    Note: 'chapter_num' is used to look up the UUID from the chapter list logic.
+    """
+    # 1. We need the Chapter UUID. Re-using get_chapters to map Num -> UUID.
+    # In a production app, you might cache the chapter list to avoid this extra call.
+    all_chapters = await get_chapters(mal_id)
+    if not all_chapters:
+        return None
+
+    chapter_uuid = None
+    for ch in all_chapters:
+        if ch.get("chapter_number") == str(chapter_num):
+            chapter_uuid = ch.get("url") # This contains the UUID from get_chapters
+            break
+    
+    if not chapter_uuid:
+        print(f"MangaDex-Module: Chapter {chapter_num} not found for MAL ID {mal_id}")
+        return None
+
+    # 2. Call MangaDex At-Home API to get image metadata
+    async with httpx.AsyncClient() as client:
+        try:
+            at_home_url = f"https://api.mangadex.org/at-home/server/{chapter_uuid}"
+            resp = await client.get(at_home_url, timeout=10)
+            resp.raise_for_status()
+            
+            data = resp.json()
+            base_url = data.get("baseUrl")
+            chapter_hash = data.get("chapter", {}).get("hash")
+            # 'data' contains full quality, 'dataSaver' contains compressed
+            filenames = data.get("chapter", {}).get("data", [])
+
+            if not base_url or not chapter_hash or not filenames:
+                print("MangaDex-Module: Incomplete data received from At-Home API.")
+                return []
+
+            # 3. Construct direct image URLs
+            # Format: {baseUrl}/data/{hash}/{filename}
+            image_links = [
+                f"{base_url}/data/{chapter_hash}/{filename}" 
+                for filename in filenames
+            ]
+            
+            return image_links
+
+        except Exception as e:
+            print(f"MangaDex-Module: Error fetching images: {e}")
+            return None

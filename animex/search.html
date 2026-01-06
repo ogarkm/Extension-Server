@@ -10,131 +10,272 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="stylesheet" href="Resources/styles.css">
     <style>
-        /* Base styles from original request */
+        /* =========================================
+           1. VARIABLES & RESET (From Reference)
+           ========================================= */
+        :root {
+            /* Brand & Palette */
+            --brand-accent: #ff9500;
+            --brand-accent-hover: #ffae40;
+            --background-primary: #0a0a0a;
+            --background-secondary: #161616;
+            --background-tertiary: #202020;
+            
+            /* Text Colors */
+            --text-primary: #eaeaea;
+            --text-secondary: #999999;
+            --text-muted: #666666;
+            
+            /* UI Elements */
+            --border-color: #2a2a2a;
+            --shadow-color: rgba(0, 0, 0, 0.6);
+            --brand-glow: rgba(255, 149, 0, 0.5);
+            
+            /* Dimensions & Animation */
+            --transition-duration: 0.3s;
+            --border-radius: 8px;
+            --nav-height: 60px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            background-color: var(--background-primary);
+            color: var(--text-primary);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            line-height: 1.6;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--background-secondary); }
+        ::-webkit-scrollbar-thumb { background: #444; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+
+        /* =========================================
+           2. APP LAYOUT
+           ========================================= */
+        .app-container {
+            width: 100%;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .main-content {
+            padding: 20px 5%;
+            max-width: 1200px;
+            margin: 0 auto;
+            width: 100%;
+            flex-grow: 1;
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin: 30px 0 15px 0;
+            padding-left: 5px;
+            border-left: 4px solid var(--brand-accent);
+            line-height: 1.2;
+        }
+
+        /* =========================================
+           3. UI COMPONENTS
+           ========================================= */
+        
+        /* Back Button */
         .back-button {
-            padding: 10px 15px;
-            margin-bottom: 10px;
-            background-color: #333;
-            color: white;
-            border: none;
-            border-radius: 5px;
+            padding: 8px 18px;
+            margin-bottom: 20px;
+            background-color: var(--background-secondary);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
             cursor: pointer;
-            font-size: 1em;
+            font-size: 0.95em;
+            font-weight: 600;
             display: inline-flex;
             align-items: center;
+            transition: all 0.2s ease;
+        }
+        .back-button:hover {
+            background-color: var(--background-tertiary);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
+            transform: translateX(-3px);
         }
         .back-button i {
             margin-right: 8px;
         }
+
+        /* Search Bar */
         .search-bar-container {
             position: relative;
             display: flex;
             align-items: center;
             width: 100%;
             max-width: 800px;
-            margin: 0 auto 20px auto;
-            padding: 0 10px;
-            border-radius: 20px;
-            background-color: #333;
-            overflow: hidden;
+            margin: 10px auto 25px auto;
+            padding: 5px 15px;
+            border-radius: var(--border-radius);
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 15px var(--shadow-color);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .search-bar-container:focus-within {
+            border-color: var(--brand-accent);
+            box-shadow: 0 0 0 1px var(--brand-accent), 0 4px 20px rgba(0,0,0,0.5);
         }
         .search-bar-container input {
             flex-grow: 1;
-            padding: 10px 15px;
+            padding: 12px 10px;
             border: none;
-            border-radius: 20px 0 0 20px;
-            background-color: #333;
-            color: #eee;
-            font-size: 1em;
+            background-color: transparent;
+            color: var(--text-primary);
+            font-size: 1.05em;
             outline: none;
-            font-family: Helvetica;
-            font-weight: 700;
+            font-family: 'Inter', sans-serif;
+            font-weight: 500;
+        }
+        .search-bar-container input::placeholder {
+            color: var(--text-muted);
+            font-weight: 400;
         }
         .search-bar-container .fa-search {
             cursor: pointer;
-            color: #aaa;
+            color: var(--text-secondary);
+            font-size: 1.1em;
             margin-right: 10px;
+            transition: color 0.2s;
+        }
+        .search-bar-container input:focus + .fa-search,
+        .search-bar-container:focus-within .fa-search {
+            color: var(--brand-accent);
         }
         .search-bar-container #clear-search-btn {
             display: none;
-            position: absolute;
-            right: 50px;
             background: none;
             border: none;
-            color: #aaa;
+            color: var(--text-muted);
             cursor: pointer;
-            padding: 0;
-            margin: 0;
-            font-size: 1.2em;
+            padding: 5px;
+            font-size: 1.1em;
+            transition: color 0.2s;
         }
+        .search-bar-container #clear-search-btn:hover {
+            color: var(--text-primary);
+        }
+
+        /* Recent Search Items */
         .recent-search-item {
-            background-color: rgba(74, 74, 79, 0.3);
-            color: #eee;
-            padding: 10px 15px;
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            padding: 8px 16px;
             border-radius: 20px;
-            margin: 5px;
+            margin: 6px;
             display: inline-flex;
             align-items: center;
             font-size: 0.9em;
+            font-weight: 500;
             cursor: pointer;
-            backdrop-filter: blur(5px);
+            transition: all 0.2s ease;
+        }
+        .recent-search-item:hover {
+            background-color: var(--background-tertiary);
+            color: var(--text-primary);
+            border-color: var(--text-muted);
         }
         .recent-search-item span {
             margin-right: 10px;
         }
         .recent-search-item .fa-times {
-            cursor: pointer;
-            color: #aaa;
+            font-size: 0.9em;
+            opacity: 0.6;
+            transition: opacity 0.2s;
         }
-        .recent-search-item .fa-times:hover {
-            color: #fff;
+        .recent-search-item:hover .fa-times {
+            opacity: 1;
+            color: var(--brand-accent);
         }
         .item-list#search-item-list.recent-searches-active {
             display: flex;
             flex-wrap: wrap;
             padding-left: 0;
+            margin-top: 10px;
         }
+
+        /* List Items (Cards) */
         .list-item.card-style {
             display: flex;
             align-items: center;
-            background-color: #2a2a2a;
-            border-radius: 8px;
-            margin-bottom: 15px;
+            background-color: var(--background-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: var(--border-radius);
+            margin-bottom: 12px;
             padding: 10px;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s;
+            overflow: hidden;
         }
         .list-item.card-style:hover {
-            background-color: #3a3a3a;
+            background-color: #1a1a1a;
+            transform: translateY(-2px);
+            border-color: var(--brand-accent);
+            box-shadow: 0 5px 15px -5px var(--shadow-color);
         }
         .list-item.card-style .item-thumbnail img {
             width: 60px;
-            height: 80px;
+            height: 85px;
             object-fit: cover;
             border-radius: 4px;
             margin-right: 15px;
+            background-color: var(--background-tertiary);
         }
         .list-item.card-style .item-details {
             flex-grow: 1;
+            min-width: 0; /* Prevents flex overflow */
         }
         .list-item.card-style .item-title {
-            font-size: 1.1em;
+            font-size: 1.05rem;
             font-weight: 600;
-            margin-bottom: 5px;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .list-item.card-style .item-meta {
-            margin-bottom: 5px;
+            margin-bottom: 6px;
         }
         .list-item.card-style .meta-pill {
-            background-color: #444;
-            padding: 3px 8px;
-            border-radius: 10px;
-            font-size: 0.8em;
-            margin-right: 5px;
+            background-color: rgba(255, 149, 0, 0.1);
+            color: var(--brand-accent);
+            border: 1px solid rgba(255, 149, 0, 0.2);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75em;
+            font-weight: 700;
+            margin-right: 6px;
+            display: inline-block;
         }
         .list-item.card-style .item-description {
-            font-size: 0.9em;
-            color: #ccc;
+            font-size: 0.85em;
+            color: var(--text-secondary);
+            line-height: 1.4;
             overflow: hidden;
             text-overflow: ellipsis;
             display: -webkit-box;
@@ -142,136 +283,206 @@
             -webkit-box-orient: vertical;
         }
         .list-item.card-style .item-arrow {
-            margin-left: 10px;
-            color: #888;
+            margin-left: 15px;
+            color: var(--border-color);
+            font-size: 0.9em;
+            transition: transform 0.2s, color 0.2s;
         }
+        .list-item.card-style:hover .item-arrow {
+            color: var(--brand-accent);
+            transform: translateX(3px);
+        }
+
+        /* Search Options Tabs */
         .search-options-list {
             display: flex;
-            gap: 18px;
-            margin: 18px 0 10px 0;
-            padding: 0 2px;
+            justify-content: center;
+            gap: 12px;
+            margin: 0 auto 20px auto;
+            padding: 0;
             list-style: none;
+            flex-wrap: wrap;
         }
         .search-option-btn {
-            background: none;
-            border: none;
-            color: #aaa;
-            font-size: 1em;
-            font-weight: 500;
-            padding: 7px 18px;
+            background: transparent;
+            border: 1px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.95em;
+            font-weight: 600;
+            padding: 8px 20px;
             border-radius: 20px;
             cursor: pointer;
-            transition: background 0.18s, color 0.18s;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .search-option-btn:hover {
+            color: var(--text-primary);
+            background-color: rgba(255, 255, 255, 0.05);
         }
         .search-option-btn.active {
-            background: var(--accent-color-active, #e50914);
-            color: #fff;
+            background: rgba(255, 149, 0, 0.15);
+            color: var(--brand-accent);
+            border-color: rgba(255, 149, 0, 0.3);
+            box-shadow: 0 0 15px rgba(255, 149, 0, 0.1);
+        }
+        .search-option-btn i {
+            font-size: 0.9em;
         }
 
         /* --- Source Toggle (for Manga) --- */
         .source-toggle-container {
             position: relative;
-            background-color: #2a2a2a;
-            border-radius: 20px;
-            padding: 5px;
+            background-color: var(--background-secondary);
+            border-radius: 25px;
+            padding: 4px;
             display: flex;
-            border: 1px solid #444;
-            max-width: 220px;
+            border: 1px solid var(--border-color);
+            max-width: 240px;
             justify-content: center;
+            margin: 0 auto 20px auto;
+            box-shadow: inset 0 2px 5px rgba(0,0,0,0.3);
         }
         #source-toggle-indicator {
             position: absolute;
-            top: 5px;
-            left: 5px;
-            height: calc(100% - 10px);
-            background-color: var(--accent-color-active, #e50914);
-            border-radius: 16px;
+            top: 4px;
+            left: 4px;
+            height: calc(100% - 8px);
+            background-color: var(--brand-accent);
+            border-radius: 20px;
             transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
             z-index: 1;
+            box-shadow: 0 2px 8px rgba(255, 149, 0, 0.4);
         }
         .source-toggle-btn {
-            padding: 8px 18px;
-            font-size: 0.9em;
-            font-weight: 600;
+            padding: 6px 20px;
+            font-size: 0.85em;
+            font-weight: 700;
             background-color: transparent;
-            color: #aaa;
+            color: var(--text-muted);
             border: none;
             cursor: pointer;
             transition: color 0.3s ease;
             z-index: 2;
-            border-radius: 16px;
+            border-radius: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         .source-toggle-btn.active {
-            color: white;
+            color: #000; /* Contrast against orange pill */
+        }
+        /* Fix for when toggle isn't active/hovered */
+        .source-toggle-btn:hover:not(.active) {
+            color: var(--text-primary);
         }
 
-        /* --- Styles for Browse Tab --- */
+        /* --- Browse View --- */
         .horizontal-scroll-container {
             display: flex;
             overflow-x: auto;
             overflow-y: hidden;
-            padding: 10px 0 20px 0;
+            padding: 10px 0 25px 0;
             -webkit-overflow-scrolling: touch;
-            scrollbar-width: thin;
-            scrollbar-color: #555 #222;
+            gap: 15px;
         }
-        .horizontal-scroll-container::-webkit-scrollbar { height: 8px; }
-        .horizontal-scroll-container::-webkit-scrollbar-track { background: #222; }
-        .horizontal-scroll-container::-webkit-scrollbar-thumb { background-color: #555; border-radius: 4px; }
-        .horizontal-scroll-container p { padding-left: 10px; }
+        .horizontal-scroll-container::-webkit-scrollbar { height: 6px; }
+        .horizontal-scroll-container::-webkit-scrollbar-thumb { background-color: var(--border-color); }
+        
         .genre-chip {
-            background-color: #333;
-            color: #eee;
-            padding: 10px 20px;
-            border-radius: 20px;
-            margin-right: 12px;
+            background-color: var(--background-secondary);
+            color: var(--text-secondary);
+            padding: 10px 24px;
+            border-radius: 8px; /* Matching border radius variable generally */
             white-space: nowrap;
             cursor: pointer;
-            transition: background-color 0.2s ease;
-            border: none;
+            transition: all 0.2s ease;
+            border: 1px solid var(--border-color);
             font-size: 0.9em;
+            font-weight: 600;
         }
-        .genre-chip:hover { background-color: var(--accent-color-active); }
+        .genre-chip:hover {
+            background-color: var(--background-tertiary);
+            color: var(--text-primary);
+            border-color: var(--brand-accent);
+            transform: translateY(-2px);
+        }
+        
+        /* Popular Cards (Vertical) */
         .popular-item-card {
-            flex: 0 0 140px;
-            margin-right: 15px;
+            flex: 0 0 150px;
             cursor: pointer;
             display: flex;
             flex-direction: column;
+            background-color: var(--background-secondary);
+            border-radius: var(--border-radius);
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            border: 1px solid transparent;
+        }
+        .popular-item-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px var(--shadow-color);
+            border-color: var(--border-color);
         }
         .popular-item-card img {
             width: 100%;
-            height: 200px;
+            height: 220px;
             object-fit: cover;
-            border-radius: 5px;
-            margin-bottom: 8px;
-            background-color: #2a2a2a;
+            background-color: var(--background-tertiary);
+            transition: transform 0.3s ease;
+        }
+        .popular-item-card:hover img {
+            transform: scale(1.05);
         }
         .popular-item-card .item-title {
+            padding: 10px;
             font-size: 0.9em;
-            font-weight: 500;
-            color: #eee;
+            font-weight: 600;
+            color: var(--text-primary);
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
+            background: var(--background-secondary);
+            position: relative;
+            z-index: 2;
         }
-        #genre-results-list { padding-top: 10px; }
+
+        #genre-results-list {
+            padding-top: 10px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        /* Override list items inside genre results to grid if preferred, 
+           but based on JS structure it appends .card-style divs. 
+           We'll keep them consistent with search results for now, 
+           but handle the container layout. */
+        #genre-results-list .list-item.card-style {
+            margin-bottom: 0;
+            height: 100%;
+        }
+
+        /* Loading / Error States */
+        p { color: var(--text-secondary); }
     </style>
 </head>
 <body>
     <div class="app-container">
-        <main class="main-content no-hero">
+        <main class="main-content">
             <!-- Universal Header: Search Bar and Tabs -->
             <div class="search-bar-container" id="search-bar-container">
                 <input type="text" id="search-input" placeholder="Type to Search Anime...">
                 <i class="fas fa-search" id="search-icon"></i>
                 <button id="clear-search-btn" style="display:none;" aria-label="Clear search" tabindex="0"><i class="fas fa-times"></i></button>
             </div>
-            <div class="source-toggle-container" id="manga-source-toggle" style="display: none; margin: -10px auto 20px auto;">
+            
+            <div class="source-toggle-container" id="manga-source-toggle" style="display: none;">
                 <span id="source-toggle-indicator"></span>
                 <button class="source-toggle-btn active" data-source="jikan">Jikan</button>
                 <button class="source-toggle-btn" data-source="mangadex">MangaDex</button>
             </div>
+
             <ul class="search-options-list" id="search-options-list">
                 <li><button class="search-option-btn active" data-mode="anime" type="button"><i class="fa-solid fa-tv"></i> Anime</button></li>
                 <li><button class="search-option-btn" data-mode="manga" type="button"><i class="fa-solid fa-book"></i> Manga</button></li>
@@ -349,14 +560,14 @@
             let currentGenre = { id: null, name: null };
             let allSearchResults = [];
             let searchTimeout;
-            const serverUrl = `https://${localStorage.getItem("extension_server_ip") || "localhost"}`;
+            const serverUrl = `http://${localStorage.getItem("extension_server_ip") || "localhost"}:7275`;
 
             // --- View Management ---
             function updateToggleIndicator() {
                 const activeButton = mangaSourceToggle.querySelector('.source-toggle-btn.active');
                 if (activeButton) {
                     sourceToggleIndicator.style.width = `${activeButton.offsetWidth}px`;
-                    sourceToggleIndicator.style.transform = `translateX(${activeButton.offsetLeft - 5}px)`;
+                    sourceToggleIndicator.style.transform = `translateX(${activeButton.offsetLeft - 4}px)`; // Adjusted for padding
                 }
             }
 
@@ -425,7 +636,7 @@
                 
                 const thumbnail = `<div class="item-thumbnail"><img src="${imageUrl}" alt="${title}" loading="lazy"></div>`;
                 const metaPills = [];
-                if (score) metaPills.push(`<span class="meta-pill">${score}/10</span>`);
+                if (score) metaPills.push(`<span class="meta-pill"><i class="fas fa-star" style="margin-right:3px; font-size:0.9em;"></i>${score}</span>`);
                 if (type === 'anime' && episodes) metaPills.push(`<span class="meta-pill">${episodes} EP</span>`);
                 if (type === 'manga' && chapters) metaPills.push(`<span class="meta-pill">${chapters} CH</span>`);
                 const shortSynopsis = synopsis.length > 100 ? synopsis.substring(0, 100) + '...' : synopsis;
@@ -459,7 +670,7 @@
                 const searches = getRecentSearches();
                 resultsTitle.textContent = 'Recents';
                 if (searches.length === 0) {
-                    searchItemList.innerHTML = '<p style="width: 100%; text-align: center;">No recent searches.</p>';
+                    searchItemList.innerHTML = '<p style="width: 100%; text-align: center; margin-top: 20px;">No recent searches.</p>';
                     return;
                 }
                 searches.forEach(term => {
@@ -483,7 +694,7 @@
                     return;
                 }
                 resultsTitle.textContent = `Results for "${query}"`;
-                searchItemList.innerHTML = '<p style="width: 100%; text-align: center;">Loading...</p>';
+                searchItemList.innerHTML = '<p style="width: 100%; text-align: center; margin-top: 20px;">Loading...</p>';
                 searchItemList.className = 'item-list';
                 try {
                     let url;
@@ -507,14 +718,14 @@
                     if (results?.length > 0) addRecentSearch(query);
                 } catch (error) {
                     console.error("Failed to fetch search results:", error);
-                    searchItemList.innerHTML = `<p style="width: 100%; text-align: center; color: red;">Error: ${error.message}.</p>`;
+                    searchItemList.innerHTML = `<p style="width: 100%; text-align: center; color: var(--brand-accent); margin-top: 20px;">Error: ${error.message}.</p>`;
                 }
             }
             function displaySearchResults(data, query, type) {
                 allSearchResults = data || [];
                 searchItemList.innerHTML = '';
                 if (allSearchResults.length === 0) {
-                    searchItemList.innerHTML = `<p style="width: 100%; text-align: center;">No results found for "${query}".</p>`;
+                    searchItemList.innerHTML = `<p style="width: 100%; text-align: center; margin-top: 20px;">No results found for "${query}".</p>`;
                     return;
                 }
                 allSearchResults.forEach(item => searchItemList.appendChild(createResultCard(item, type)));
@@ -554,8 +765,8 @@
                     popularMangaRes.data.forEach(item => popularMangaList.appendChild(createPopularCard(item, 'manga')));
                 } catch (error) {
                     console.error("Failed to load browse content:", error);
-                    genreListContainer.innerHTML = `<p style="color:red;">Error loading genres.</p>`;
-                    popularAnimeList.innerHTML = `<p style="color:red;">Error loading popular anime.</p>`;
+                    genreListContainer.innerHTML = `<p style="color:var(--brand-accent);">Error loading genres.</p>`;
+                    popularAnimeList.innerHTML = `<p style="color:var(--brand-accent);">Error loading popular anime.</p>`;
                 }
             }
             function showGenreResultsView(genreId, genreName) {
@@ -583,7 +794,7 @@
                     data.data.forEach(item => genreResultsList.appendChild(createResultCard(item, type)));
                 } catch (error) {
                     console.error(`Failed to fetch ${type}:`, error);
-                    genreResultsList.innerHTML = `<p style="width: 100%; text-align: center; color: red;">Error.</p>`;
+                    genreResultsList.innerHTML = `<p style="width: 100%; text-align: center; color: var(--brand-accent);">Error.</p>`;
                 }
             }
 

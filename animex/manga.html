@@ -300,6 +300,38 @@
         background: rgba(255,255,255,0.1);
       }
 
+      /* --- Hero Indicators (Dots) --- */
+      .hero-indicators {
+        position: absolute;
+        bottom: 40px;
+        right: 60px;
+        display: flex;
+        gap: 12px;
+        z-index: 10;
+      }
+
+      .hero-dot {
+        width: 12px;
+        height: 12px;
+        background-color: rgba(255, 255, 255, 0.3);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+      }
+
+      .hero-dot:hover {
+        background-color: rgba(255, 255, 255, 0.6);
+        transform: scale(1.1);
+      }
+
+      .hero-dot.active {
+        background-color: var(--accent-color);
+        width: 20px; /* Stretch effect */
+        border-radius: 20px;
+        box-shadow: 0 0 10px rgba(222, 84, 30, 0.4);
+      }
+
       /* --- MEDIA QUERY FOR DESKTOP --- */
       @media (min-width: 1024px) {
         body {
@@ -318,6 +350,16 @@
         /* Make navbar cleaner on desktop */
         .navbar {
             padding: 20px 0;
+        }
+      }
+
+      @media (max-width: 768px) {
+        .section-title {
+            font-size: 1em;
+        }
+
+        .horizontal-scroll-container {
+          display: none;
         }
       }
 
@@ -574,7 +616,7 @@
                 <img class="hero-bg-image" id="hero-bg" src="" alt="">
                 <div class="hero-overlay"></div>
                 <div class="hero-content" id="hero-content">
-                    <span class="hero-label">Trending Now</span>
+                    <span class="hero-label">Trending Manga</span>
                     <div class="hero-tags" id="hero-tags">
                         <!-- Tags filled by JS -->
                     </div>
@@ -590,6 +632,8 @@
                         </button>
                     </div>
                 </div>
+                <!-- Interactive Indicators (Dots) -->
+                <div class="hero-indicators" id="hero-indicators"></div>
             </div>
 
             <main class="main-content" id="main-content-area-jikan"></main>
@@ -617,6 +661,7 @@
       document.addEventListener("DOMContentLoaded", () => {
         const serverUrl = `https://${localStorage.getItem("extension_server_ip") || "localhost"}`;
         const JIKAN_API_BASE_URL = "https://api.jikan.moe/v4";
+        const CONTENT_JSON_FILE = "manga_content.json";
 
         const urlParams = new URLSearchParams(window.location.search);
         const profileId = urlParams.get('profileId');
@@ -691,8 +736,8 @@
             } catch (error) {
                 console.error(`Failed to load MangaDex section "${title}":`, error);
                 const container = document.getElementById("main-content-area-mangadex");
-                if (container.querySelector(".loader")) {
-                   container.querySelector(".loader").parentElement.innerHTML = `<p class="error-message">Could not load section.</p>`;
+                if (container && container.lastElementChild && container.lastElementChild.querySelector(".loader")) {
+                   container.lastElementChild.querySelector(".loader").parentElement.innerHTML = `<p class="error-message">Could not load section.</p>`;
                 }
             }
         }
@@ -717,7 +762,7 @@
             });
         }
 
-        // --- JIKAN API LOGIC & CAROUSEL ---
+        // --- JIKAN / CURATED CONTENT LOGIC ---
         const mainContentAreaJikan = document.getElementById("main-content-area-jikan");
         const carouselContainer = document.getElementById("featured-carousel-container");
         let carouselData = [];
@@ -729,19 +774,44 @@
         let currentHeroIndex = 0;
         let heroInterval;
 
-        async function initializeCarousel() {
+        // Fetch the curated JSON
+        async function loadCuratedContent() {
           try {
-            const response = await fetch(`${JIKAN_API_BASE_URL}/top/manga?filter=bypopularity&limit=10`);
-            if (!response.ok) throw new Error(`Carousel fetch error: ${response.status}`);
-            carouselData = (await response.json()).data.filter( (m) => m.images?.jpg?.large_image_url );
-            if (carouselData.length < 5) throw new Error("Not enough data for carousel.");
+            const response = await fetch(CONTENT_JSON_FILE);
+            if (!response.ok) throw new Error("Could not load manga_content.json");
+            const data = await response.json();
 
+            // 1. Setup Spotlight (Carousel + Hero)
+            if (data.spotlight && data.spotlight.length > 0) {
+              setupSpotlight(data.spotlight);
+            } else {
+              // Fallback if spotlight is empty
+              carouselContainer.innerHTML = `<p class="error-message">No spotlight content found.</p>`;
+            }
+
+            // 2. Setup Horizontal Sections
+            if (data.sections && data.sections.length > 0) {
+              data.sections.forEach(section => {
+                createLocalJikanSection(section);
+              });
+            }
+
+          } catch (error) {
+            console.error("Content Load Error:", error);
+            // Fallback to manual API call if JSON fails
+            createJikanHorizontalSection("Top Manga (API Fallback)", `${JIKAN_API_BASE_URL}/top/manga?filter=bypopularity&limit=15`);
+          }
+        }
+
+        function setupSpotlight(spotlightItems) {
+            carouselData = spotlightItems;
+            
             // 1. Mobile Carousel Rendering
             carouselContainer.innerHTML = `
               <div class="carousel-viewport">
-                  ${carouselData.map( (manga) => `
-                      <div class="carousel-slide" data-id="${manga.mal_id}">
-                          <img src="${manga.images.jpg.large_image_url}" alt="${manga.title}">
+                  ${carouselData.map( (item) => `
+                      <div class="carousel-slide" data-id="${item.id}">
+                          <img src="${item.image_tall || item.image}" alt="${item.name}">
                       </div>`).join("")}
               </div>`;
 
@@ -749,34 +819,51 @@
             slides = Array.from(carouselContainer.querySelectorAll(".carousel-slide"));
             const viewport = carouselContainer.querySelector(".carousel-viewport");
             let touchstartX = 0;
-            viewport.addEventListener("touchstart", (e) => (touchstartX = e.changedTouches[0].screenX), { passive: true });
-            viewport.addEventListener("touchend", (e) => {
-              const touchendX = e.changedTouches[0].screenX;
-              if (touchendX < touchstartX - 50) navigateCarousel(1);
-              if (touchendX > touchstartX + 50) navigateCarousel(-1);
-            });
-            viewport.addEventListener("click", (e) => {
-              const slide = e.target.closest(".carousel-slide");
-              if (slide && slide.classList.contains("slide-center")) {
-                openMangaModal('jikan', slide.dataset.id);
-              }
-            });
-            updateCarousel();
+            if(viewport) {
+                viewport.addEventListener("touchstart", (e) => (touchstartX = e.changedTouches[0].screenX), { passive: true });
+                viewport.addEventListener("touchend", (e) => {
+                  const touchendX = e.changedTouches[0].screenX;
+                  if (touchendX < touchstartX - 50) navigateCarousel(1);
+                  if (touchendX > touchstartX + 50) navigateCarousel(-1);
+                });
+                viewport.addEventListener("click", (e) => {
+                  const slide = e.target.closest(".carousel-slide");
+                  if (slide && slide.classList.contains("slide-center")) {
+                    openMangaModal('jikan', slide.dataset.id);
+                  }
+                });
+                updateCarousel();
+            }
 
             // 2. Desktop Hero Rendering & Shuffle
             if (carouselData.length > 0) {
+                setupHeroIndicators(carouselData);
                 updateDesktopHero(carouselData[0]);
-                startHeroShuffle();
+                resetHeroTimer();
             }
+        }
 
-          } catch (error) {
-            console.error("Failed to initialize carousel:", error);
-            carouselContainer.innerHTML = `<p class="error-message">Could not load featured content.</p>`;
-          }
+        // Desktop Hero Helper Functions
+        function setupHeroIndicators(data) {
+            const container = document.getElementById('hero-indicators');
+            container.innerHTML = '';
+            
+            data.forEach((_, index) => {
+                const dot = document.createElement('div');
+                dot.className = 'hero-dot';
+                if (index === 0) dot.classList.add('active');
+                
+                dot.addEventListener('click', () => {
+                    currentHeroIndex = index;
+                    updateDesktopHero(data[index], true);
+                    resetHeroTimer();
+                });
+                
+                container.appendChild(dot);
+            });
         }
         
-        function startHeroShuffle() {
-            // Shuffle every 8 seconds
+        function resetHeroTimer() {
             if (heroInterval) clearInterval(heroInterval);
             heroInterval = setInterval(() => {
                 currentHeroIndex = (currentHeroIndex + 1) % carouselData.length;
@@ -784,8 +871,8 @@
             }, 8000);
         }
         
-        function updateDesktopHero(manga, animate = false) {
-            if(!manga) return;
+        function updateDesktopHero(item, animate = false) {
+            if(!item) return;
             
             const heroContent = document.getElementById('hero-content');
             const heroBg = document.getElementById('hero-bg');
@@ -797,10 +884,18 @@
             const heroTags = document.getElementById('hero-tags');
             const heroBtn = document.getElementById('hero-read-btn');
 
-            const title = manga.title_english || manga.title;
-            const subtitle = manga.title_japanese || manga.title;
-            const image = manga.images.jpg.large_image_url;
-            const synopsis = manga.synopsis ? manga.synopsis.split('.')[0] + '.' : "No description available.";
+            // Update Dots
+            const allDots = document.querySelectorAll('.hero-dot');
+            allDots.forEach((dot, idx) => {
+                if(idx === currentHeroIndex) dot.classList.add('active');
+                else dot.classList.remove('active');
+            });
+
+            // Use item properties from JSON
+            const title = item.name;
+            const subtitle = item.jp_name; // Manga usually don't have separate sub-titles in this JSON format
+            const image = item.image; // Use wide image if available, else standard
+            const synopsis = item.description || "Click to read more.";
             
             // Function to actually set DOM content
             const setContent = () => {
@@ -810,21 +905,16 @@
                 heroBg.src = image;
                 
                 heroTags.innerHTML = '';
-                if(manga.genres && manga.genres.length > 0) {
-                    manga.genres.slice(0, 4).forEach(g => {
-                        const tag = document.createElement('span');
-                        tag.className = 'hero-tag';
-                        tag.textContent = g.name;
-                        heroTags.appendChild(tag);
-                    });
-                }
+                const tag = document.createElement('span');
+                tag.className = 'hero-tag';
+                tag.textContent = "Manga";
+                heroTags.appendChild(tag);
                 
                 // Clear old listener and add new one
                 const newBtn = heroBtn.cloneNode(true);
                 heroBtn.parentNode.replaceChild(newBtn, heroBtn);
                 newBtn.addEventListener('click', () => {
-                   clearInterval(heroInterval); // Stop shuffle if user clicks
-                   openMangaModal('jikan', manga.mal_id); 
+                   openMangaModal('jikan', item.id); 
                 });
             };
 
@@ -844,6 +934,7 @@
             }
         }
 
+        // Mobile Carousel Logic
         function navigateCarousel(direction) {
           if (isAnimating) return;
           isAnimating = true;
@@ -856,6 +947,7 @@
 
         function updateCarousel(direction = 0, oldIndex = -1) {
           const total = slides.length;
+          if (total === 0) return;
           const leftIndex = (currentIndex - 1 + total) % total;
           const rightIndex = (currentIndex + 1 + total) % total;
 
@@ -877,6 +969,32 @@
           });
         }
 
+        // Render sections from JSON
+        function createLocalJikanSection(sectionData) {
+            const section = document.createElement("section");
+            section.className = "content-section";
+            section.innerHTML = `
+              <div class="section-header-row">
+                  <h2 class="section-title">${sectionData.title}</h2>
+              </div>
+              <div class="horizontal-scroll-container"></div>`;
+            mainContentAreaJikan.appendChild(section);
+            const scrollContainer = section.querySelector(".horizontal-scroll-container");
+            
+            if (sectionData.items && sectionData.items.length > 0) {
+                 // Convert JSON format to format expected by displayJikanPosters
+                 const mappedItems = sectionData.items.map(item => ({
+                     mal_id: item.id,
+                     title: item.name,
+                     images: { jpg: { image_url: item.image } }
+                 }));
+                 displayJikanPosters(mappedItems, scrollContainer);
+            } else {
+                scrollContainer.innerHTML = `<p class="error-message">No items in this section.</p>`;
+            }
+        }
+
+        // Legacy function for Fallback API calls
         async function createJikanHorizontalSection(title, apiUrl) {
           try {
             const section = document.createElement("section");
@@ -905,19 +1023,17 @@
             return;
           }
           mangaData.forEach((item) => {
-            if (!item.images?.jpg?.image_url) return;
-            const isManga = (item.type && item.type.toLowerCase() === 'manga') || true;
+            // Check for valid image in either API structure or JSON structure
+            const imageUrl = item.images?.jpg?.image_url || item.image;
+            if (!imageUrl) return;
+            
             const card = document.createElement("div");
             card.className = "poster-card";
             card.onclick = () => {
-              if (isManga) {
                 window.parent.openPopup(`manga-info.html?source=jikan&id=${item.mal_id}`);
-              } else {
-                window.parent.openPopup(`series-info.html?id=${item.mal_id}`);
-              }
             };
             card.innerHTML = `
-              <img src="${item.images.jpg.image_url}" alt="${item.title}" loading="lazy">
+              <img src="${imageUrl}" alt="${item.title}" loading="lazy">
               <div style="position:absolute;top:8px;left:8px;z-index:2;">
                 <span style="background:#DE541E;color:#fff;font-size:0.75em;font-weight:700;padding:2px 8px;border-radius:6px;box-shadow:0 2px 6px rgba(0,0,0,0.2);letter-spacing:1px;">Manga</span>
               </div>
@@ -1098,11 +1214,11 @@
         }
 
         async function initializePage() {
-            // Jikan content
-            initializeCarousel();
+            // Jikan / Curated Content
+            await loadCuratedContent();
+            
+            // Continue Reading
             await initializeContinueReading();
-            createJikanHorizontalSection("Top Manga", `${JIKAN_API_BASE_URL}/top/manga?limit=20`);
-            createJikanHorizontalSection("Top Manhwa", `${JIKAN_API_BASE_URL}/manga?type=manhwa&order_by=popularity&limit=15`);
             
             // MangaDex content
             createMangaDexHorizontalSection("Recently Updated", "latestUploadedChapter");

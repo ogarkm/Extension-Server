@@ -1,0 +1,19 @@
+{
+  "name": "nsfw",
+  "version": "1.0.0",
+  "description": "Adds NSFW content.",
+  "main": "extension.py",
+  "static_folder": "src",
+  "requirements": [
+    "httpx",
+    "beautifulsoup4",
+    "jinja2"
+  ],
+  "settings": {
+    "id": "nsfw_enabled",
+    "text": "Enable NSFW Content",
+    "icon": "fas fa-exclamation-triangle"
+  },
+  "port": 7277,
+  "start_command": "uvicorn server:app --host 0.0.0.0 --port 7277"
+}

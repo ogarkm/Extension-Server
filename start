@@ -7,7 +7,7 @@
 # Author: Animex Developer (Indie)
 # Date: 2023-10-01
 # License: GPL-3.0
-# Version: 1.0
+# Version: 2.0
 #==============================================================================
 
 set -euo pipefail  # Exit on error, undefined vars, pipe failures
@@ -171,6 +171,48 @@ except: pass
     done < <(find "$modules_dir" -name "*.module" -type f -print0)
 }
 
+# Check and free required ports
+check_and_free_ports() {
+    local ports=(7275 7277)
+
+    for port in "${ports[@]}"; do
+        log_info "Checking if port $port is in use..."
+
+        local pids
+        pids=$(lsof -ti tcp:"$port" || true)
+
+        if [[ -n "$pids" ]]; then
+            log_warn "Port $port is already in use by PID(s): $pids"
+            print_warning "⚠ Port $port is in use. Attempting to stop process(es)..."
+
+            # Try graceful shutdown first
+            kill $pids 2>/dev/null || true
+            sleep 2
+
+            # Force kill if still alive
+            for pid in $pids; do
+                if kill -0 "$pid" 2>/dev/null; then
+                    log_warn "PID $pid did not terminate gracefully. Force killing..."
+                    kill -9 "$pid" 2>/dev/null || true
+                fi
+            done
+
+            sleep 1
+        fi
+
+        # Final verification
+        if lsof -ti tcp:"$port" &>/dev/null; then
+            log_error "Port $port is still in use after kill attempts"
+            print_error "❌ Failed to free port $port. Aborting startup."
+            exit 1
+        else
+            log_info "Port $port is free"
+            print_success "✓ Port $port is available"
+        fi
+    done
+}
+
+
 # Extract requirements from extension package.json files
 extract_extension_requirements() {
     local extensions_dir="${SCRIPT_DIR}/extensions"
@@ -276,14 +318,14 @@ install_dependencies() {
 }
 
 # Perform first-time setup
-# ... (rest of the script remains the same)
-
 first_time_setup() {
     print_orange "🚀 Performing Animex Extension Server first-time setup..."
     log_info "Starting Animex Extension Server first-time setup"
     
     check_requirements
     setup_virtual_environment
+    activate_virtual_environment
+    install_dependencies
     
     touch "$FIRST_RUN_FLAG"
     log_info "Animex Extension Server first-time setup completed"
@@ -292,9 +334,9 @@ first_time_setup() {
 
 # Start the Animex Extension Server
 start_application() {
-    log_info "Starting $APP_NAME on https://$APP_HOST:$APP_PORT"
+    log_info "Starting $APP_NAME on http://$APP_HOST:$APP_PORT"
     print_orange "🎬 Starting Animex Extension Server..."
-    print_orange "🌐 Server URL: https://$APP_HOST:$APP_PORT"
+    print_orange "🌐 Server URL: http://$APP_HOST:$APP_PORT"
     print_orange "📺 Animex Extension Server is ready for anime streaming!"
     print_info "Press CTRL+C to stop the Animex server"
     echo ""
@@ -318,7 +360,6 @@ start_application() {
 }
 
 # Cleanup function
-# Cleanup function
 cleanup() {
     local exit_code=$?
     log_info "Shutting down Animex Extension Server (exit code: $exit_code)"
@@ -336,7 +377,6 @@ cleanup() {
     log_info "Animex Extension Server shutdown complete"
     exit $exit_code
 }
-
 
 # Display help information
 show_help() {
@@ -434,6 +474,8 @@ main() {
     install_dependencies
     
     echo ""
+    echo "✅ All systems go! Starting Animex Extension Server... Checking ports..."
+    check_and_free_ports
     
     # Start the Animex Extension Server
     start_application
@@ -441,4 +483,3 @@ main() {
 
 # Execute main function with all arguments
 main "$@"
-

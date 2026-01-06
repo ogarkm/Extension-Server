@@ -1,0 +1,380 @@
+{
+    "name": "HiAnime Streamer",
+    "version": "1.2.0",
+    "author": "Animex",
+    "description": "Resolves HiAnime.to streams. Returns local Player URL for streaming and direct m3u8/mp4 for downloading.",
+    "type": ["ANIME_STREAMER"],
+    "requirements": ["httpx"]
+}
+
+---
+import re
+import json
+import httpx
+import asyncio
+import urllib.parse
+import html
+from typing import Optional, Dict, List, Any
+
+# =========================
+# CONSTANTS
+# =========================
+
+BASE_URL = "https://hianime.to"
+JIKAN_API = "https://api.jikan.moe/v4/anime"
+USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+
+HEADERS = {
+    "User-Agent": USER_AGENT,
+    "Referer": BASE_URL,
+    "Origin": BASE_URL,
+    "X-Requested-With": "XMLHttpRequest"
+}
+
+# =========================
+# UTILITY HELPERS
+# =========================
+
+def levenshtein_distance(s1: str, s2: str) -> float:
+    if len(s1) < len(s2):
+        return levenshtein_distance(s2, s1)
+    if len(s2) == 0:
+        return len(s1)
+
+    previous_row = range(len(s2) + 1)
+    for i, c1 in enumerate(s1):
+        current_row = [i + 1]
+        for j, c2 in enumerate(s2):
+            insertions = previous_row[j + 1] + 1
+            deletions = current_row[j] + 1
+            substitutions = previous_row[j] + (c1 != c2)
+            current_row.append(min(insertions, deletions, substitutions))
+        previous_row = current_row
+
+    distance = previous_row[-1]
+    max_len = max(len(s1), len(s2))
+    return 1 - (distance / max_len)
+
+
+def normalize_title(title: str) -> str:
+    if not title:
+        return ""
+    t = title.lower()
+    t = re.sub(r'(season|cour|part|the animation|the movie|movie)', '', t)
+    t = re.sub(r'\d+(st|nd|rd|th)', lambda m: m.group(0).replace(m.group(1), ''), t)
+    t = re.sub(r'[^a-z0-9]+', '', t)
+    t = re.sub(r'(?<!i)ii(?!i)', '2', t)
+    return t
+
+# =========================
+# INTERNAL LOGIC
+# =========================
+
+async def get_mal_title(client: httpx.AsyncClient, mal_id: int) -> str:
+    print(f"[HiAnime] Fetching MAL details for ID: {mal_id}")
+    try:
+        url = f"{JIKAN_API}/{mal_id}"
+        resp = await client.get(url, headers={"User-Agent": USER_AGENT})
+        if resp.status_code == 404:
+            raise Exception("MAL ID not found")
+        data = resp.json().get('data', {})
+        
+        english = data.get('title_english')
+        default = data.get('title')
+        
+        title = english if english else default
+        print(f"[HiAnime] Resolved MAL ID {mal_id} to Title: {title}")
+        return title
+    except Exception as e:
+        print(f"[HiAnime] Failed to fetch MAL data: {e}")
+        raise
+
+
+async def search_hianime(client: httpx.AsyncClient, query: str, is_dub: bool) -> Optional[Dict]:
+    print(f"[HiAnime] Searching for: '{query}' (Dub: {is_dub})")
+    target_norm = normalize_title(query)
+    
+    search_url = f"{BASE_URL}/ajax/search/suggest?keyword={urllib.parse.quote(query)}"
+    resp = await client.get(search_url)
+    data = resp.json()
+    html_content = data.get('html', '')
+    
+    # Regex matches: <a href="/something-id" ... data-jname="..." ... >Title</h3>
+    regex = r'<a href="\/([^"]+)" class="nav-item">[\s\S]*?<h3 class="film-name"[^>]*data-jname="([^"]+)"[^>]*>([^<]+)<\/h3>'
+    
+    matches = []
+    for m in re.finditer(regex, html_content):
+        page_url = m.group(1)
+        jname = m.group(2).strip()
+        title = m.group(3).strip()
+        
+        if page_url.startswith("search?"):
+            continue
+
+        id_match = re.search(r'-(\d+)$', page_url)
+        anime_id = id_match.group(1) if id_match else page_url
+        
+        matches.append({
+            "id": anime_id,
+            "title": html.unescape(title),
+            "jname": html.unescape(jname),
+            "norm_title": normalize_title(title),
+            "norm_jname": normalize_title(jname)
+        })
+
+    if not matches:
+        print("[HiAnime] No search matches found.")
+        return None
+
+    # Filter and Sort
+    filtered = []
+    for m in matches:
+        sim_title = levenshtein_distance(m['norm_title'], target_norm)
+        sim_jname = levenshtein_distance(m['norm_jname'], target_norm)
+        
+        if (target_norm in m['norm_title'] or 
+            target_norm in m['norm_jname'] or 
+            sim_title > 0.6 or 
+            sim_jname > 0.6):
+            # Construct internal ID with sub/dub flag
+            m['internal_id'] = f"{m['id']}/{'dub' if is_dub else 'sub'}"
+            m['subOrDub'] = 'dub' if is_dub else 'sub'
+            filtered.append(m)
+
+    filtered.sort(key=lambda x: max(
+        levenshtein_distance(x['norm_title'], target_norm),
+        levenshtein_distance(x['norm_jname'], target_norm)
+    ), reverse=True)
+
+    if not filtered:
+        return None
+        
+    print(f"[HiAnime] Best match: {filtered[0]['title']}")
+    return filtered[0]
+
+
+async def get_target_episode_id(client: httpx.AsyncClient, anime_id_full: str, episode_num: int) -> Optional[str]:
+    real_id, _ = anime_id_full.split('/')
+    url = f"{BASE_URL}/ajax/v2/episode/list/{real_id}"
+    
+    resp = await client.get(url)
+    data = resp.json()
+    html_content = data.get('html', '')
+
+    # Regex: data-number="1" ... data-id="12345"
+    regex = r'<a[^>]*class="[^"]*\bep-item\b[^"]*"[^>]*data-number="(\d+)"[^>]*data-id="(\d+)"'
+    
+    for m in re.finditer(regex, html_content):
+        if int(m.group(1)) == episode_num:
+            return m.group(2)
+            
+    return None
+
+
+async def get_server_id(client: httpx.AsyncClient, episode_id: str, sub_or_dub: str, server_name: str = "HD-1") -> str:
+    print(f"[HiAnime] Finding server '{server_name}' for Ep ID {episode_id} ({sub_or_dub})")
+    
+    url = f"{BASE_URL}/ajax/v2/episode/servers?episodeId={episode_id}"
+    resp = await client.get(url)
+    data = resp.json()
+    html_content = data.get('html', '')
+
+    allowed_types = ["sub", "raw"] if sub_or_dub == "sub" else [sub_or_dub]
+    type_pattern = "|".join(allowed_types)
+    
+    # Regex: data-type="(sub|dub)" data-id="123" ... > HD-1 </a>
+    regex = rf'<div[^>]*class="item server-item"[^>]*data-type="({type_pattern})"[^>]*data-id="(\d+)"[^>]*>\s*<a[^>]*>\s*{re.escape(server_name)}\s*</a>'
+    
+    match = re.search(regex, html_content, re.IGNORECASE)
+    if not match:
+        raise Exception(f"Server '{server_name}' not found for type {sub_or_dub}")
+    
+    return match.group(2)
+
+
+async def extract_megacloud(client: httpx.AsyncClient, server_id: str) -> Dict:
+    # 1. Get Embed Link
+    source_url = f"{BASE_URL}/ajax/v2/episode/sources?id={server_id}"
+    resp = await client.get(source_url)
+    source_data = resp.json()
+    embed_url = source_data.get('link')
+    print(f"[HiAnime] Embed Link: {embed_url}")
+
+    # 2. Try Fallback First (ShadeOfChaos)
+    try:
+        print("[HiAnime] Attempting ShadeOfChaos API extraction...")
+        fallback_url = f"https://ac-api.ofchaos.com/api/anime/embed/convert/v2?embedUrl={urllib.parse.quote(embed_url)}"
+        f_resp = await client.get(fallback_url)
+        if f_resp.status_code == 200:
+            return process_source_response(f_resp.json())
+    except Exception as e:
+        print(f"[HiAnime] Fallback API failed: {e}")
+
+    # 3. Direct Extraction (MegaCloud)
+    print("[HiAnime] Attempting direct MegaCloud extraction...")
+    parsed_url = urllib.parse.urlparse(embed_url)
+    base_domain = f"{parsed_url.scheme}://{parsed_url.netloc}/"
+    
+    headers = {
+        "Referer": base_domain,
+        "User-Agent": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Mobile Safari/537.36",
+        "X-Requested-With": "XMLHttpRequest"
+    }
+    
+    resp = await client.get(embed_url, headers=headers)
+    html_text = resp.text
+
+    file_id_match = re.search(r'<title>\s*File\s+#([a-zA-Z0-9]+)\s*-', html_text, re.IGNORECASE)
+    if not file_id_match:
+        raise Exception("File ID missing from MegaCloud embed")
+    file_id = file_id_match.group(1)
+
+    nonce = None
+    match48 = re.search(r'\b[a-zA-Z0-9]{48}\b', html_text)
+    if match48:
+        nonce = match48.group(0)
+    else:
+        parts = re.findall(r'["\']([A-Za-z0-9]{16})["\']', html_text)
+        if len(parts) >= 3:
+            nonce = parts[0] + parts[1] + parts[2]
+            
+    if not nonce:
+        raise Exception("Nonce missing from MegaCloud embed")
+
+    api_url = f"{base_domain}embed-2/v3/e-1/getSources?id={file_id}&_k={nonce}"
+    api_resp = await client.get(api_url, headers=headers)
+    return process_source_response(api_resp.json())
+
+
+def process_source_response(data: Dict) -> Dict:
+    sources = data.get('sources', [])
+    tracks = data.get('tracks', [])
+    intro = data.get('intro')
+    outro = data.get('outro')
+    
+    # Try to find MP4 first for better compatibility, then HLS
+    stream = next((s for s in sources if s.get('type') == 'mp4'), None)
+    if not stream:
+        stream = next((s for s in sources if s.get('type') == 'hls'), None)
+        
+    if not stream:
+        raise Exception("No valid stream found in JSON")
+
+    return {
+        "url": stream.get('file'),
+        "type": stream.get('type'),
+        "skip": {
+            "intro": intro,
+            "outro": outro
+        },
+        "captions": [t for t in tracks if t.get('kind') == 'captions'],
+        "thumbnails": [t for t in tracks if t.get('kind') == 'thumbnails'],
+        "referer": "https://megacloud.club/"
+    }
+
+
+async def _resolve_internal(mal_id: int, episode: int, dub: bool) -> Optional[Dict]:
+    """
+    Internal helper to resolve everything and return the data dict.
+    """
+    async with httpx.AsyncClient(headers=HEADERS, follow_redirects=True) as client:
+        try:
+            # 1. Resolve Title
+            title = await get_mal_title(client, mal_id)
+            
+            # 2. Search HiAnime
+            anime = await search_hianime(client, title, dub)
+            if not anime:
+                print(f"[HiAnime] Could not find anime for: {title}")
+                return None
+            
+            # 3. Get Episode ID
+            ep_id = await get_target_episode_id(client, anime['internal_id'], episode)
+            if not ep_id:
+                print(f"[HiAnime] Episode {episode} not found for {anime['title']}")
+                return None
+                
+            # 4. Get Server
+            try:
+                server_internal_id = await get_server_id(client, ep_id, anime['subOrDub'], "HD-1")
+            except:
+                print("[HiAnime] HD-1 failed, trying HD-2...")
+                server_internal_id = await get_server_id(client, ep_id, anime['subOrDub'], "HD-2")
+
+            # 5. Extract Stream
+            return await extract_megacloud(client, server_internal_id)
+
+        except Exception as e:
+            import traceback
+            print(f"[HiAnime] Internal Resolution Error: {e}")
+            traceback.print_exc()
+            return None
+
+
+# =========================
+# PUBLIC MODULE API
+# =========================
+
+async def get_iframe_source(
+    mal_id: int,
+    episode: int,
+    dub: bool
+) -> Optional[str]:
+    """
+    Returns the video_player.html URL for streaming in frontend.
+    """
+    result = await _resolve_internal(mal_id, episode, dub)
+    if not result:
+        return None
+    
+    url = result["url"]
+    skip = result.get("skip", {})
+    captions = result.get("captions", [])
+    thumbnails = result.get("thumbnails", [])
+    referer = result.get("referer", "")
+
+    player_url = "/video_player.html?stream=true&full=true"
+    
+    # Add skip_times
+    skip_times_param = {}
+    if skip.get("intro"):
+        skip_times_param["intro"] = skip["intro"]
+    if skip.get("outro"):
+        skip_times_param["outro"] = skip["outro"]
+    
+    if skip_times_param:
+        player_url += f"&skip_times={urllib.parse.quote(json.dumps(skip_times_param))}"
+    
+    # Add captions
+    if captions:
+        player_url += f"&captions={urllib.parse.quote(json.dumps(captions))}"
+    
+    # Add thumbnails
+    if thumbnails:
+        player_url += f"&thumbnails={urllib.parse.quote(json.dumps(thumbnails))}"
+    
+    # Add referer
+    if referer:
+        player_url += f"&referer={urllib.parse.quote(referer)}"
+    
+    # Add core info
+    player_url += f"&id={mal_id}&episode={episode}&video={urllib.parse.quote(url)}"
+    
+    return player_url
+
+
+async def get_download_link(
+    mal_id: int,
+    episode: int,
+    dub: bool,
+    quality: str = "auto"
+) -> Optional[str]:
+    """
+    Returns the direct source URL (m3u8 or mp4).
+    """
+    result = await _resolve_internal(mal_id, episode, dub)
+    if not result:
+        return None
+    
+    print(f"[HiAnime] Direct Link Type: {result.get('type')}")
+    return result["url"]
