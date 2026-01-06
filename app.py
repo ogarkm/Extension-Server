@@ -2590,7 +2590,7 @@ async def proxy_to_extension(ext_name: str, path: str, request: Request):
 
 # --- Static Files Hosting ---
 app.mount("/data", StaticFiles(directory="data"), name="data")
-app.mount("/", StaticFiles(directory="../animex", html=True), name="static_site")
+app.mount("/", StaticFiles(directory="animex", html=True), name="static_site")
 print("Static files mounted at /data and /")
 
 # --- To make the server runnable directly ---
