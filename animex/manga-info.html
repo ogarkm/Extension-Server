@@ -525,7 +525,7 @@
         };
 
         // --- State ---
-        const serverUrl = `http://${localStorage.getItem("extension_server_ip") || "localhost"}:7275`;
+        const serverUrl = `https://${localStorage.getItem("extension_server_ip") || "localhost"}`;
         let state = {
           mangaId: null,
           source: "jikan", // default

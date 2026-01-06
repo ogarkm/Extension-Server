@@ -1116,7 +1116,7 @@
 
     <script>
       let currentMalId = new URLSearchParams(window.location.search).get("id");
-      let serverUrl = "http://" + localStorage.getItem("extension_server_ip") + ":7275";
+      let serverUrl = "https://" + localStorage.getItem("extension_server_ip") + "";
       
       // Assumes the Python backend from prompt 1 is running on port 5000 (localhost or defined IP)
       // Since this file is likely served by Live Server, we need the exact address of the Python API

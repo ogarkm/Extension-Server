@@ -898,7 +898,7 @@
 
       /* PWA Banner */
       #pwa-install-banner {
-        position: fixed;
+        position: none;
         bottom: 0;
         left: 0;
         right: 0;
@@ -2024,7 +2024,7 @@
       async function checkServerStatus(ip, isDeployed = false) {
         statusIndicator.textContent = "Connecting...";
         statusIndicator.className = "status-indicator connecting";
-        const url = isDeployed ? "/identify" : `http://${ip}:7275/identify`;
+        const url = isDeployed ? "/identify" : `https://${ip}/identify`;
 
         try {
           const response = await fetch(url, {
